@@ -1,0 +1,1 @@
+# public_freeswitch_adapter
