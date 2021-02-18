@@ -1,0 +1,15 @@
+<!-- http://wiki.freeswitch.org/wiki/Mod_conference -->
+<!-- None of these paths are real if you want any of these options you need to really set them up -->
+<configuration name="imm_adapter.conf" description="Immersitech Adapter">
+  <!-- Advertise certain presence on startup . -->
+  <settings>
+    <param name="license_file_path" value="/usr/lib/immersitech/Immersitech_Engineering_sound_manager_license_key.dat"/>
+    <param name="room_config_file_path" value="/usr/lib/immersitech/room_config.json"/>
+    <param name="websocket_config_file_path" value="/usr/lib/immersitech/imm_websocket_config.json"/>
+    <param name="websocket_enabled" value="1"/>
+    <param name="imm_spatial_output_audio_sample_rate" value="48000"/>
+    <param name="imm_spatial_output_audio_frames_per_buffer" value="960"/>
+    <param name="imm_spatial_impulse_length" value="8192"/>
+    <param name="imm_max_string_length" value="10000"/>
+  </settings>
+</configuration>
