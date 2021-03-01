@@ -2568,7 +2568,7 @@ SWITCH_STANDARD_APP(conference_function)
 	if (member.read_resampler) {
 		switch_resample_destroy(&member.read_resampler);
 	}
-	
+
 	switch_event_destroy(&params);
 	switch_buffer_destroy(&member.resample_buffer);
 	switch_buffer_destroy(&member.audio_buffer);
@@ -3609,6 +3609,7 @@ conference_obj_t *conference_new(char *name, conference_xml_cfg_t cfg, switch_co
 	conference->interval = interval;
 	conference->ivr_dtmf_timeout = ivr_dtmf_timeout;
 	conference->ivr_input_timeout = ivr_input_timeout;
+
 
 	conference->agc_level = 0;
 	conference->agc_low_energy_level = 0;

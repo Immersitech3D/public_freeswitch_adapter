@@ -1193,7 +1193,7 @@ void *SWITCH_THREAD_FUNC conference_loop_input(switch_thread_t *thread, void *ob
 
 			member->last_score = member->score;
 
-			if (member->id == member->conference->floor_holder) {
+			if ((switch_channel_test_flag(channel, CF_VIDEO) || member->avatar_png_img) && (member->id == member->conference->floor_holder)) {
 				if (member->id != member->conference->video_floor_holder &&
 					(member->floor_packets > member->conference->video_floor_packets || member->energy_level == 0)) {
 					conference_video_set_floor_holder(member->conference, member, SWITCH_FALSE);
@@ -1568,9 +1568,10 @@ void conference_loop_output(conference_member_t *member)
 			write_frame.data = data;
 			use_buffer = member->mux_buffer;
 			low_count = 0;
-				
+
 			if ((write_frame.datalen = (uint32_t) switch_buffer_read(use_buffer, write_frame.data, bytes))) {
 				write_frame.samples = write_frame.datalen / 2 / member->conference->channels;
+
 				if( !conference_utils_member_test_flag(member, MFLAG_CAN_HEAR)) {
 					memset(write_frame.data, 255, write_frame.datalen);
 				} else if (member->volume_out_level) { /* Check for output volume adjustments */
@@ -1584,6 +1585,7 @@ void conference_loop_output(conference_member_t *member)
 				}
 
 				conference_member_check_channels(&write_frame, member, SWITCH_FALSE);
+
 				if (switch_core_session_write_frame(member->session, &write_frame, SWITCH_IO_FLAG_NONE, 0) != SWITCH_STATUS_SUCCESS) {
 					switch_mutex_unlock(member->audio_out_mutex);
 					switch_mutex_unlock(member->write_mutex);
