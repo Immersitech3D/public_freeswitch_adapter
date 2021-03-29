@@ -74,6 +74,7 @@
 /*            Code injection for Immersitech Adapter.             */
 /*                                                                */
 /******************************************************************/
+#if IMM_SPATIAL_AUDIO_ENABLED
 #include "../mod_imm_adapter/immersitech_core.h"
 
 #ifndef IMM_EVENT_MAINT
@@ -89,6 +90,7 @@
 
 #ifndef IMM_SPATIAL_OUTPUT_AUDIO_SAMPLE_RATE
 #define IMM_SPATIAL_OUTPUT_AUDIO_SAMPLE_RATE 48000
+#endif
 #endif
 
 #ifndef MIN
@@ -932,7 +934,9 @@ struct conference_member {
 	/*            Code injection for Immersitech Adapter.             */
 	/*                                                                */
 	/******************************************************************/
+#if IMM_SPATIAL_AUDIO_ENABLED
 	void* imm_participant;
+#endif
 };
 
 typedef enum {
@@ -1032,7 +1036,9 @@ void conference_event_call_setup_handler(switch_event_t *event);
 /*            Code injection for Immersitech Adapter.             */
 /*                                                                */
 /******************************************************************/
+#if IMM_SPATIAL_AUDIO_ENABLED
 void immersitech_event_handler(switch_event_t *event);
+#endif
 
 void conference_member_add_file_data(conference_member_t *member, int16_t *data, switch_size_t file_data_len);
 void conference_send_notify(conference_obj_t *conference, const char *status, const char *call_id, switch_bool_t final);

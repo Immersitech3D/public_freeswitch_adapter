@@ -1309,7 +1309,7 @@ void conference_loop_output(conference_member_t *member)
 	switch_codec_implementation_t read_impl = { 0 }, real_read_impl = { 0 };
 	int sanity;
 	switch_status_t st;
-	
+
 	/******************************************************************/
 	/*                                                                */
 	/*            Code injection for Immersitech Adapter.             */
@@ -1335,7 +1335,7 @@ void conference_loop_output(conference_member_t *member)
 	/*            Code injection for Immersitech Adapter.             */
 	/*                                                                */
 	/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED 
+#if IMM_SPATIAL_AUDIO_ENABLED
 	samples = switch_samples_per_packet(IMM_SPATIAL_OUTPUT_AUDIO_SAMPLE_RATE, interval);
 #else
 	samples = switch_samples_per_packet(member->conference->rate, interval);
@@ -1533,9 +1533,10 @@ void conference_loop_output(conference_member_t *member)
 		/******************************************************************/
 #if IMM_SPATIAL_AUDIO_ENABLED
 		if(member->imm_participant != NULL) {
+			int frame_len;
 			switch_mutex_lock(member->audio_out_mutex);
 			memset(processed_frame, 0, SWITCH_RECOMMENDED_BUFFER_SIZE);
-			int frame_len = imm_core_output_audio(member->imm_participant, member->conference->name, imm_participant_id, processed_frame);
+			frame_len = imm_core_output_audio(member->imm_participant, member->conference->name, imm_participant_id, processed_frame);
 			if(frame_len > 0) {
 				switch_mux_channels((int16_t *)processed_frame, frame_len, 2, member->conference->channels);
 				switch_buffer_zero(member->mux_buffer);

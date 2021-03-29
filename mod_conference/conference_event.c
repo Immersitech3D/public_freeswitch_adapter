@@ -753,8 +753,10 @@ switch_status_t conference_event_add_data(conference_obj_t *conference, switch_e
 	/*            Code injection for Immersitech Adapter.             */
 	/*                                                                */
 	/******************************************************************/
+#if IMM_SPATIAL_AUDIO_ENABLED
 	switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Conference-Rate", "%d", conference->rate);
 	switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Conference-Channels", "%d", conference->channels);
+#endif
 	switch_event_merge(event, conference->variables);
 
 	return status;
@@ -926,6 +928,7 @@ void conference_data_event_handler(switch_event_t *event)
 /*            Code injection for Immersitech Adapter.             */
 /*                                                                */
 /******************************************************************/
+#if IMM_SPATIAL_AUDIO_ENABLED
 void immersitech_event_handler(switch_event_t *event)
 {
 	conference_member_t* member = NULL;
@@ -953,7 +956,7 @@ void immersitech_event_handler(switch_event_t *event)
 				}
 			}
 			switch_mutex_unlock(conference->member_mutex);
-			
+
 			if (member == NULL) {
 				switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Not able to get member with id: %s\n", participant_id);
 			}
@@ -984,6 +987,7 @@ void immersitech_event_handler(switch_event_t *event)
 	switch_thread_rwlock_unlock(conference->rwlock);
 
 }
+#endif
 
 void conference_event_pres_handler(switch_event_t *event)
 {

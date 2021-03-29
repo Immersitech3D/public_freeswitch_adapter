@@ -218,7 +218,9 @@ void *SWITCH_THREAD_FUNC conference_thread_run(switch_thread_t *thread, void *ob
 	uint8_t *async_file_frame;
 	int16_t *bptr;
 	uint32_t x = 0;
+#if !IMM_SPATIAL_AUDIO_ENABLED
 	int32_t z = 0;
+#endif
 	conference_cdr_node_t *np;
 	/******************************************************************/
 	/*                                                                */
@@ -587,7 +589,9 @@ void *SWITCH_THREAD_FUNC conference_thread_run(switch_thread_t *thread, void *ob
 		if (ready || has_file_data) {
 			/* Use more bits in the main_frame to preserve the exact sum of the audio samples. */
 			int main_frame[SWITCH_RECOMMENDED_BUFFER_SIZE] = { 0 };
+#if !IMM_SPATIAL_AUDIO_ENABLED
 			int16_t write_frame[SWITCH_RECOMMENDED_BUFFER_SIZE] = { 0 };
+#endif
 
 
 			/* Init the main frame with file data if there is any. */
@@ -627,7 +631,9 @@ void *SWITCH_THREAD_FUNC conference_thread_run(switch_thread_t *thread, void *ob
 			   cut it off at the min and max range if need be and write the frame to the output buffer.
 			*/
 			for (omember = conference->members; omember; omember = omember->next) {
+#if !IMM_SPATIAL_AUDIO_ENABLED
 				switch_size_t ok = 1;
+#endif
 
 				if (!conference_utils_member_test_flag(omember, MFLAG_RUNNING) ||
 					(!conference_utils_member_test_flag(omember, MFLAG_NOCHANNEL) && !switch_channel_test_flag(omember->channel, CF_AUDIO))) {
@@ -705,7 +711,7 @@ void *SWITCH_THREAD_FUNC conference_thread_run(switch_thread_t *thread, void *ob
 						goto end;
 					}
 				}
-#endif	
+#endif
 			}
 		} else { /* There is no source audio.  Push silence into all of the buffers */
 			int16_t write_frame[SWITCH_RECOMMENDED_BUFFER_SIZE] = { 0 };
@@ -4015,7 +4021,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_conference_load)
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Couldn't subscribe to immersitech events!\n");
 	}
 #endif
-	
+
 	SWITCH_ADD_API(api_interface, "conference", "Conference module commands", conference_api_main, p);
 	SWITCH_ADD_APP(app_interface, mod_conference_app_name, mod_conference_app_name, NULL, conference_function, NULL, SAF_SUPPORT_TEXT_ONLY);
 	SWITCH_ADD_APP(app_interface, "conference_set_auto_outcall", "conference_set_auto_outcall", NULL, conference_auto_function, NULL, SAF_NONE);

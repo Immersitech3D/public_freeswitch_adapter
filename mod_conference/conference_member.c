@@ -247,6 +247,9 @@ switch_status_t conference_member_add_event_data(conference_member_t *member, sw
 
 	if (member->session) {
 		switch_channel_t *channel = switch_core_session_get_channel(member->session);
+#if IMM_SPATIAL_AUDIO_ENABLED
+		switch_caller_profile_t *profile;
+#endif
 
 		if (member->verbose_events) {
 			switch_channel_event_set_data(channel, event);
@@ -255,16 +258,18 @@ switch_status_t conference_member_add_event_data(conference_member_t *member, sw
 		}
 		switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Video", "%s",
 								switch_channel_test_flag(switch_core_session_get_channel(member->session), CF_VIDEO) ? "true" : "false" );
-		
+
 		/******************************************************************/
 		/*                                                                */
 		/*            Code injection for Immersitech Adapter.             */
 		/*                                                                */
 		/******************************************************************/
-		switch_caller_profile_t *profile = switch_channel_get_caller_profile(channel);
+#if IMM_SPATIAL_AUDIO_ENABLED
+		profile = switch_channel_get_caller_profile(channel);
 		if(profile != NULL) {
 			switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Member-Name", "%s", profile->caller_id_name);
 		}
+#endif
 	}
 
 	switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Hear", "%s", conference_utils_member_test_flag(member, MFLAG_CAN_HEAR) ? "true" : "false" );
@@ -717,7 +722,9 @@ switch_status_t conference_member_add(conference_obj_t *conference, conference_m
 	/*            Code injection for Immersitech Adapter.             */
 	/*                                                                */
 	/******************************************************************/
+#if IMM_SPATIAL_AUDIO_ENABLED
 	switch_assert(member->imm_participant == NULL);
+#endif
 	switch_mutex_lock(conference->mutex);
 
 	if (member->rec) {
@@ -1812,6 +1819,13 @@ int conference_member_setup_media(conference_member_t *member, conference_obj_t 
 			goto done;
 		}
 	}
+
+
+/******************************************************************/
+/*                                                                */
+/*            Code injection for Immersitech Adapter.             */
+/*                                                                */
+/******************************************************************/
 #if IMM_SPATIAL_AUDIO_ENABLED
 	/* Setup a Signed Linear codec for writing audio. */
 	if (switch_core_codec_init(&member->write_codec,
@@ -1831,7 +1845,7 @@ int conference_member_setup_media(conference_member_t *member, conference_obj_t 
 		goto codec_done2;
 	}
 #else
-/* Setup a Signed Linear codec for writing audio. */
+	/* Setup a Signed Linear codec for writing audio. */
 	if (switch_core_codec_init(&member->write_codec,
 							   "L16",
 							   NULL,
