@@ -99,28 +99,34 @@ void show_rooms(switch_stream_handle_t *stream)
 void move_seat(switch_stream_handle_t *stream, char* room_id, char* participant_id, int seat_index)
 {
 	imm_core_move_participant_seat(globals.core_handle, room_id, participant_id, seat_index);
+	stream->write_function(stream, "Moved participant %s in room %s to seat %i \n", participant_id, room_id, seat_index);
 }
 
 void change_room_config(switch_stream_handle_t *stream, char* room_id, int room_config_id) {
 	imm_core_change_room_config(globals.core_handle, room_id, room_config_id);
+	stream->write_function(stream, "Changed room %s config to %i \n", room_id, room_config_id);
 }
 
 void set_participant_state(switch_stream_handle_t *stream, char* room_id, char* participant_id, char* state, char* value) {
 	imm_core_set_participant_state(globals.core_handle, room_id, participant_id, state, value);
+	stream->write_function(stream, "Set participant %s in room %s %s to %s \n", participant_id, room_id, state, value);
 }
 
 void get_participant_state(switch_stream_handle_t *stream, char* room_id, char* participant_id, char* state) {
-	imm_core_get_participant_state(globals.core_handle, room_id, participant_id, state);
+	int result = imm_core_get_participant_state(globals.core_handle, room_id, participant_id, state);
+	stream->write_function(stream, "Get participant %s state %s: %s \n", participant_id, state, result);
 }
 
 void set_all_participants_state(switch_stream_handle_t *stream, char* room_id, char* state, char* value) {
 	imm_core_set_all_participants_state(globals.core_handle, room_id, state, value);
+	stream->write_function(stream, "Set all participants in room %s %s to %s \n", room_id, state, value);
 }
 
 void get_all_participants_state(switch_stream_handle_t *stream, char* room_id, char* state) {
 	char value[globals.imm_max_string_length];
 	memset(value, 0, globals.imm_max_string_length);
 	imm_core_get_all_participants_state(globals.core_handle, room_id, state, value, globals.imm_max_string_length);
+	stream->write_function(stream, "Get all participants state: %s \n", value);
 }
 
 #define IMM_ADAPTER_USAGE "\nget_version \nshow_room_configs  \nshow_rooms  \nshow_room_by_id <room_id>  \nmove_seat <room_id> <participant_id> <seat_index>  \nchange_room_config <room_id> <room_config_id>  \nset_participant_state <room_id> <participant_id> <control_to_edit> <value>  \nget_participant_state <room_id> <participant_id> <control_to_edit>  \nset_all_participants_state <room_id> <control_to_edit> <value>  \nget_all_participants_state <room_id> <control_to_edit> \nget_defined_states"
