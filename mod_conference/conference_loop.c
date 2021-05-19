@@ -1537,7 +1537,8 @@ void conference_loop_output(conference_member_t *member)
 			switch_mutex_lock(member->audio_out_mutex);
 			memset(processed_frame, 0, SWITCH_RECOMMENDED_BUFFER_SIZE);
 			frame_len = imm_core_output_audio(member->imm_participant, member->conference->name, imm_participant_id, processed_frame);
-			if(frame_len > 0) {
+			if(frame_len == -10000) { // only process if the immersitech library didn't return an error (-10000)
+				frame_len = (member->conference->interval * member->conference->rate) / 1000; // this calculates the output buffer size from imm library
 				switch_mux_channels((int16_t *)processed_frame, frame_len, 2, member->conference->channels);
 				switch_buffer_zero(member->mux_buffer);
 				switch_buffer_write(member->mux_buffer, processed_frame, frame_len * member->conference->channels * 2);
