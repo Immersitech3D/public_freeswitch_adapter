@@ -1,7 +1,7 @@
 include $(top_srcdir)/build/modmake.rulesam
 MODNAME=mod_conference
 
-IMMERSITECH_LIBS = /usr/lib/immersitech
+IMMERSITECH_LIBS = /usr/local/lib/immersitech
 
 mod_LTLIBRARIES = mod_conference.la
 mod_conference_la_SOURCES  = mod_conference.c conference_api.c conference_loop.c conference_al.c conference_cdr.c conference_video.c

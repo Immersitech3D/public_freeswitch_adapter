@@ -6,7 +6,7 @@ These files represent the Freeswitch Adapter that is compatible with the Immersi
 
 ## How to use
 
-This code is for the current version of Freeswitch: 1.10.5. Clone the source code for Freeswitch 1.10.5 and then replace the mod_conference files and configure.ac with the files in repository. Then add the mod_imm_adapter folder to `./src/mod/applications`. Freeswitch should be built as normal, except now that it will include the Immersitech adapter.
+This code is for the current version of Freeswitch: 1.10.6. Clone the source code for Freeswitch 1.10.6 and then replace the mod_conference files and configure.ac with the files in repository. Then add the mod_imm_adapter folder to `./src/mod/applications`. Freeswitch should be built as normal, except now that it will include the Immersitech adapter.
 
 
 

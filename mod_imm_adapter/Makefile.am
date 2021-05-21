@@ -1,7 +1,7 @@
 include $(top_srcdir)/build/modmake.rulesam
 MODNAME=mod_imm_adapter
 
-IMMERSITECH_LIBS = /usr/lib/immersitech
+IMMERSITECH_LIBS = /usr/local/lib/immersitech
 
 mod_LTLIBRARIES = mod_imm_adapter.la
 mod_imm_adapter_la_SOURCES  = mod_imm_adapter.cpp mod_imm_event_manager.cpp mod_imm_logger_handler.cpp
