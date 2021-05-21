@@ -229,6 +229,9 @@ void *SWITCH_THREAD_FUNC conference_thread_run(switch_thread_t *thread, void *ob
 	/******************************************************************/
 #if IMM_SPATIAL_AUDIO_ENABLED
 	char imm_participant_id[1000];
+	int16_t *processed_frame;
+	processed_frame = (int16_t*)switch_core_alloc(conference->pool, SWITCH_RECOMMENDED_BUFFER_SIZE);
+	memset(processed_frame, 0, SWITCH_RECOMMENDED_BUFFER_SIZE);
 #endif
 
 	file_frame = switch_core_alloc(conference->pool, SWITCH_RECOMMENDED_BUFFER_SIZE);
@@ -373,21 +376,6 @@ void *SWITCH_THREAD_FUNC conference_thread_run(switch_thread_t *thread, void *ob
 
 			if (switch_buffer_inuse(imember->audio_buffer) >= bytes
 				&& (buf_read = (uint32_t) switch_buffer_read(imember->audio_buffer, imember->frame, bytes))) {
-
-				/******************************************************************/
-				/*                                                                */
-				/*            Code injection for Immersitech Adapter.             */
-				/*                                                                */
-				/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-				int upFrameCount = buf_read / 2 / conference->channels;
-				//switch_mux_channels((int16_t *)imember->frame, upFrameCount, conference->channels, 1);
-
-				if(imember->imm_participant != NULL) {
-					sprintf(imm_participant_id, "%u", imember->id);
-					imm_core_input_audio(imember->imm_participant, conference->name, imm_participant_id, (int16_t*) imember->frame, upFrameCount);
-				}
-#endif
 				imember->read = buf_read;
 				conference_utils_member_set_flag_locked(imember, MFLAG_HAS_AUDIO);
 				ready++;
@@ -618,11 +606,22 @@ void *SWITCH_THREAD_FUNC conference_thread_run(switch_thread_t *thread, void *ob
 				if (!(conference_utils_member_test_flag(omember, MFLAG_RUNNING) && conference_utils_member_test_flag(omember, MFLAG_HAS_AUDIO))) {
 					continue;
 				}
-
+				
+				/******************************************************************/
+				/*                                                                */
+				/*            Code injection for Immersitech Adapter.             */
+				/*                                                                */
+				/******************************************************************/
+#if IMM_SPATIAL_AUDIO_ENABLED
+				sprintf(imm_participant_id, "%u", omember->id);
+				imm_core_input_audio(conference->imm_core, conference->name, imm_participant_id, (int16_t*) omember->frame, omember->read / 2 / conference->channels);
+#else
 				bptr = (int16_t *) omember->frame;
 				for (x = 0; x < omember->read / 2; x++) {
 					main_frame[x] += (int32_t) bptr[x];
 				}
+#endif			
+				
 			}
 
 			/* Create write frame once per member who is not deaf for each sample in the main frame
@@ -645,7 +644,19 @@ void *SWITCH_THREAD_FUNC conference_thread_run(switch_thread_t *thread, void *ob
 				/*            Code injection for Immersitech Adapter.             */
 				/*                                                                */
 				/******************************************************************/
-#if !IMM_SPATIAL_AUDIO_ENABLED
+#if IMM_SPATIAL_AUDIO_ENABLED			
+				switch_mutex_lock(omember->audio_out_mutex);
+				sprintf(imm_participant_id, "%u", omember->id);
+				memset(processed_frame, 0, SWITCH_RECOMMENDED_BUFFER_SIZE);
+				int frame_len = imm_core_output_audio(conference->imm_core, conference->name, imm_participant_id, processed_frame);
+				if(frame_len == -10000) {
+					frame_len = (omember->conference->interval * omember->conference->rate) / 1000; // this calculates the output buffer size from imm library
+					switch_mux_channels((int16_t *)processed_frame, frame_len, 2, omember->conference->channels);
+					switch_buffer_zero(omember->mux_buffer);
+					switch_buffer_write(omember->mux_buffer, processed_frame, frame_len * omember->conference->channels * 2);
+				}
+				switch_mutex_unlock(omember->audio_out_mutex);
+#else
 				if (!conference_utils_member_test_flag(omember, MFLAG_CAN_HEAR)) {
 					switch_mutex_lock(omember->audio_out_mutex);
 					memset(write_frame, 255, bytes);

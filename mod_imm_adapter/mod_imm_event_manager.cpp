@@ -12,6 +12,8 @@ void mod_imm_event_manager::create_room_event(std::string room_id) {
 	switch_event_t *event;
     switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, IMM_EVENT_MAINT);
 	switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Room-Id", room_id.c_str());
+	event->event_user_data = (void*) _core;
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Send imm core address %p to room with id:%s.\n", event->event_user_data, room_id.c_str());
 	switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Action", "immersitech-create-room");
 	switch_event_fire(&event);
 }
@@ -30,8 +32,6 @@ void mod_imm_event_manager::add_participant_event(std::string room_id, std::stri
 	switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Room-Id", room_id.c_str());
 	switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Participant-Id", participant_id.c_str());
 	switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Participant-Name", participant_name.c_str());
-	event->event_user_data = (void*) _core;
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Send participant address %p to mod_room with id:%s.\n", event->event_user_data, participant_id.c_str());
 	switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Action", "immersitech-create-participant");
 	switch_event_fire(&event);
 }

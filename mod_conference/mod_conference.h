@@ -784,6 +784,13 @@ typedef struct conference_obj {
 	char *default_layout_name;
 	int mux_paused;
 	char *video_codec_config_profile_name;
+	
+	/******************************************************************/
+	/*                                                                */
+	/*            Code injection for Immersitech Adapter.             */
+	/*                                                                */
+	/******************************************************************/
+	void* imm_core;
 } conference_obj_t;
 
 /* Relationship with another member */
@@ -929,14 +936,6 @@ struct conference_member {
 	switch_core_video_filter_t video_filters;
 	int video_manual_border;
 
-	/******************************************************************/
-	/*                                                                */
-	/*            Code injection for Immersitech Adapter.             */
-	/*                                                                */
-	/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-	void* imm_participant;
-#endif
 };
 
 typedef enum {

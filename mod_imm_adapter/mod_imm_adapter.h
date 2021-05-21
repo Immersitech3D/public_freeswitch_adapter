@@ -19,7 +19,7 @@
 #endif
 
 #ifndef IMM_ADAPTER_VERSION
-#define IMM_ADAPTER_VERSION "v0.01.020"
+#define IMM_ADAPTER_VERSION "v0.01.023"
 #endif
 
 /**

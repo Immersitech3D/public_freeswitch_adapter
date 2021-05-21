@@ -369,7 +369,7 @@ void conference_event_handler(switch_event_t *event) {
 			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Create member with conference id: %s, member id: %s, conference sample rate: %d, channels: %d\n", conference_name, participant_id, sample_rate, num_channels);
 			create_imm_participant(conference_name, participant_id, participant_name, sample_rate, num_channels);
 		}
-		else if (strcmp(action, "del-member") == 0) {
+		else if ( (strcmp(action, "del-member") == 0) || (strcmp(action, "stop-recording") == 0)) {
 			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Member id: %s left conference id: %s.\n", participant_id, conference_name);
 			remove_imm_participant(conference_name, participant_id);
 		}
@@ -378,6 +378,11 @@ void conference_event_handler(switch_event_t *event) {
 		}
 		else if (strcmp(action, "stop-talking") == 0) {
 			imm_participant_stop_talking_event(conference_name, participant_id);
+		}
+		else if (strcmp(action, "start-recording") == 0) { // Add a listener only participant for recording
+			int sample_rate = atoi(conference_rate);
+			int num_channels = atoi(conference_channels);
+			imm_core_add_participant(globals.core_handle, conference_name, participant_id, "recorder", sample_rate, num_channels, 3);
 		}
 	}
 }
