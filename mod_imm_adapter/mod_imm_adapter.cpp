@@ -1,4 +1,5 @@
 #include "mod_imm_adapter.h"
+#include <sstream>
 
 /* Prototypes */
 SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_imm_adapter_shutdown);
@@ -31,8 +32,8 @@ static switch_status_t do_config(switch_bool_t reload)
 				if (!strcmp(name, "license_file_path")) {
       				globals.license_file_path = (char*) value;
 				} 
-				else if (!strcmp(name, "room_config_file_path")) {
-      				globals.room_config_file_path = (char*) value;
+				else if (!strcmp(name, "room_layout_file_path")) {
+      				globals.room_layout_file_path = (char*) value;
 				} 
 				else if (!strcmp(name, "websocket_config_file_path")) {
 					globals.websocket_config_file_path = (char*)value;
@@ -40,17 +41,14 @@ static switch_status_t do_config(switch_bool_t reload)
 				else if (!strcmp(name, "websocket_enabled")) {
 					globals.websocket_enabled = atoi(value);
 				}
-				else if (!strcmp(name, "imm_spatial_output_audio_sample_rate")) {
-      				globals.imm_spatial_output_audio_sample_rate = atoi(value);
+				else if (!strcmp(name, "imm_output_audio_sample_rate")) {
+      				globals.imm_output_audio_sample_rate = atoi(value);
 				} 
-				else if (!strcmp(name, "imm_spatial_output_audio_frames_per_buffer")) {
-      				globals.imm_spatial_output_audio_frames_per_buffer = atoi(value);
+				else if (!strcmp(name, "imm_output_audio_frames_per_buffer")) {
+      				globals.imm_output_audio_frames_per_buffer = atoi(value);
 				} 
-				else if (!strcmp(name, "imm_spatial_impulse_length")) {
-      				globals.imm_spatial_impulse_length = atoi(value);
-				} 
-				else if (!strcmp(name, "imm_max_string_length")) {
-      				globals.imm_max_string_length = atoi(value);
+				else if (!strcmp(name, "imm_spatial_quality")) {
+      				globals.imm_spatial_quality = atoi(value);
 				} 
 				else {
 					switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Unknown attribute %s\n", name);
@@ -69,74 +67,13 @@ static switch_status_t do_config(switch_bool_t reload)
  */
 SWITCH_MODULE_DEFINITION(mod_imm_adapter, mod_imm_adapter_load, mod_imm_adapter_shutdown, NULL);
 
-void show_room_configs(switch_stream_handle_t *stream)
-{
-	char value[globals.imm_max_string_length];
-	memset(value, 0, globals.imm_max_string_length);
-    
-	imm_core_get_json_all_room_configs(globals.core_handle, value, globals.imm_max_string_length);
-	stream->write_function(stream, "Room configurations: %s \n", value);
-}
-
-void show_room_by_id(switch_stream_handle_t *stream, char* room_id)
-{
-	char value[globals.imm_max_string_length];
-	memset(value, 0, globals.imm_max_string_length);
-    
-	imm_core_get_json_room(globals.core_handle, room_id, value, globals.imm_max_string_length);
-	stream->write_function(stream, "Room as Json: %s \n", value);
-}
-
-void show_rooms(switch_stream_handle_t *stream)
-{
-	char value[globals.imm_max_string_length];
-	memset(value, 0, globals.imm_max_string_length);
-    
-	imm_core_get_json_all_rooms(globals.core_handle, value, globals.imm_max_string_length);
-	stream->write_function(stream, "Rooms as Json: %s \n", value);
-}
-
-void move_seat(switch_stream_handle_t *stream, char* room_id, char* participant_id, int seat_index)
-{
-	imm_core_move_participant_seat(globals.core_handle, room_id, participant_id, seat_index);
-	stream->write_function(stream, "Moved participant %s in room %s to seat %i \n", participant_id, room_id, seat_index);
-}
-
-void change_room_config(switch_stream_handle_t *stream, char* room_id, int room_config_id) {
-	imm_core_change_room_config(globals.core_handle, room_id, room_config_id);
-	stream->write_function(stream, "Changed room %s config to %i \n", room_id, room_config_id);
-}
-
-void set_participant_state(switch_stream_handle_t *stream, char* room_id, char* participant_id, char* state, char* value) {
-	imm_core_set_participant_state(globals.core_handle, room_id, participant_id, state, value);
-	stream->write_function(stream, "Set participant %s in room %s %s to %s \n", participant_id, room_id, state, value);
-}
-
-void get_participant_state(switch_stream_handle_t *stream, char* room_id, char* participant_id, char* state) {
-	int result = imm_core_get_participant_state(globals.core_handle, room_id, participant_id, state);
-	stream->write_function(stream, "Get participant %s state %s: %s \n", participant_id, state, result);
-}
-
-void set_all_participants_state(switch_stream_handle_t *stream, char* room_id, char* state, char* value) {
-	imm_core_set_all_participants_state(globals.core_handle, room_id, state, value);
-	stream->write_function(stream, "Set all participants in room %s %s to %s \n", room_id, state, value);
-}
-
-void get_all_participants_state(switch_stream_handle_t *stream, char* room_id, char* state) {
-	char value[globals.imm_max_string_length];
-	memset(value, 0, globals.imm_max_string_length);
-	imm_core_get_all_participants_state(globals.core_handle, room_id, state, value, globals.imm_max_string_length);
-	stream->write_function(stream, "Get all participants state: %s \n", value);
-}
-
-#define IMM_ADAPTER_USAGE "\nget_version \nshow_room_configs  \nshow_rooms  \nshow_room_by_id <room_id>  \nmove_seat <room_id> <participant_id> <seat_index>  \nchange_room_config <room_id> <room_config_id>  \nset_participant_state <room_id> <participant_id> <control_to_edit> <value>  \nget_participant_state <room_id> <participant_id> <control_to_edit>  \nset_all_participants_state <room_id> <control_to_edit> <value>  \nget_all_participants_state <room_id> <control_to_edit> \nget_defined_states"
-#define IMM_ADAPTER_PARTICIPANT_STATES "\nIMM_CONTROL_STEREO_BYPASS_ENABLE | IMM_CONTROL_MUTE_ENABLE | IMM_CONTROL_ANC_ENABLE | IMM_CONTROL_AGC_ENABLE | IMM_CONTROL_MIXING_3D_ENABLE | IMM_CONTROL_DEVICE | IMM_CONTROL_HALF_SPAN_ANGLE | IMM_CONTROL_MASTER_GAIN"
-
+#define IMM_ADAPTER_USAGE "\nget_version \nget_license_info \nget_library_configuration \nget_json_all_room_layouts \nget_room_count \nget_room_layout <room_id>\nget_participant_count <room_id> \nget_participant_position <room_id> <participant_id> \nget_participant_seat <room_id> <participant_id> \nget_participant_state <room_id> <participant_id> <control> \nget_participant_configuration <room_id> <participant_id> \nget_participant_name <room_id> <participant_id> \nget_participant_spherical <room_id> <listener_id> <source_id> \nset_room_layout <room_id> <layout_id> \nset_participant_name <room_id> <participant_id> <name> \nset_all_participants_state <room_id> <control> <value> \nset_participant_state <room_id> <participant_id> <control> <value> \nset_participant_position <room_id> <participant_id> <x> <y> <z> <azimuth_heading> <elevation_heading> \nset_participant_seat <room_id> <participant_id> <seat_id>"
 
 SWITCH_STANDARD_API(imm_adapter_api_function)
 {
 	int ok = 0;
 	char *mycmd = NULL;
+	std::stringstream ss;
 	if (cmd) {
 		char *argv[10] = { 0 };
 		int argc = 0;
@@ -145,89 +82,221 @@ SWITCH_STANDARD_API(imm_adapter_api_function)
 		if (argc == 0) {
 			goto end;
 		}
-		if (!strcmp(argv[0], "show_room_configs")) {
-			show_room_configs(stream);
-			ok = 1;
-			goto end;
-		} else if (!strcmp(argv[0], "show_rooms")) {
-			show_rooms(stream);
+		if (!strcmp(argv[0], "get_version")) {
+
+			// Write the Adapter Version
+			ss << "Immersitech Library Version: " << imm_get_version() << std::endl;
+			ss << "Engage Freeswitch Adapter Version: " << IMM_ADAPTER_VERSION << std::endl;
+			stream->write_function(stream, ss.str().c_str());
+
 			ok = 1;
 			goto end;
 		}
-		else if (!strcmp(argv[0], "show_room_by_id")) {
-			printf("Show room id: %s. \n", argv[1]);
-			show_room_by_id(stream, argv[1]);
+		else if (!strcmp(argv[0], "get_license_info")) {
+			stream->write_function(stream, imm_get_license_info(globals.core_handle));
 			ok = 1;
 			goto end;
-		} else if (!strcmp(argv[0], "move_seat")){
-			if (argc == 4) {
-				printf("Move participant id %s in room: %s at seat index %s. \n", argv[2], argv[1], argv[3]);
-				move_seat(stream, argv[1], argv[2], atoi(argv[3]));
+		}
+		else if (!strcmp(argv[0], "get_library_configuration")) {
+			imm_library_configuration lib_config = imm_get_library_configuration(globals.core_handle);
+			ss << "output_sampling_rate: " << lib_config.output_sampling_rate << std::endl;
+			ss << "output_number_channels: " << lib_config.output_number_channels << std::endl;
+			ss << "output_number_frames: " << lib_config.output_number_frames << std::endl;
+			ss << "spatial_quality: " << lib_config.spatial_quality << std::endl;
+			ss << "interleaved: " << lib_config.interleaved << std::endl;
+			stream->write_function(stream, ss.str().c_str());
+			ok = 1;
+			goto end;
+		}
+		else if (!strcmp(argv[0], "get_json_all_room_layouts")) {
+			stream->write_function(stream, imm_get_json_all_room_layouts(globals.core_handle));
+			ok = 1;
+			goto end;
+		}
+		else if (!strcmp(argv[0], "get_room_count")) {
+			int room_count;
+			imm_error_code error_code = imm_get_room_count(globals.core_handle, &room_count);
+			if (error_code == IMM_ERROR_NONE) {
+				ss << room_count;
+				stream->write_function(stream, ss.str().c_str());
+			}
+			ok = 1;
+			goto end;
+		}
+		else if (!strcmp(argv[0], "get_room_layout")) {
+			if (argc == 2) {
+				int layout_id;
+				int room_id = std::stoi(argv[1]);
+				imm_error_code error_code = imm_get_room_layout(globals.core_handle, room_id, &layout_id);
+				if (error_code == IMM_ERROR_NONE) {
+					ss << layout_id;
+					stream->write_function(stream, ss.str().c_str());
+				}
 				ok = 1;
 			}
 			goto end;
-		} else if (!strcmp(argv[0], "change_room_config")){
+		}
+		else if (!strcmp(argv[0], "get_participant_count")) {
+			if (argc == 2) {
+				int participant_count;
+				int room_id = std::stoi(argv[1]);
+				imm_error_code error_code = imm_get_participant_count(globals.core_handle, room_id, &participant_count);
+				if (error_code == IMM_ERROR_NONE) {
+					ss << participant_count;
+					stream->write_function(stream, ss.str().c_str());
+				}
+				ok = 1;
+			}
+			goto end;
+		}
+		else if (!strcmp(argv[0], "get_participant_position")) {
 			if (argc == 3) {
-				printf("Change room config to config_id %s in room: %s. \n", argv[2], argv[1]);
-				change_room_config(stream, argv[1], atoi(argv[2]));
+				imm_position position;
+				imm_heading heading;
+				int room_id = std::stoi(argv[1]);
+				int participant_id = std::stoi(argv[2]);
+				imm_error_code error_code = imm_get_participant_position(globals.core_handle, room_id, participant_id, &position, &heading);
+				if (error_code == IMM_ERROR_NONE) {
+					ss << "Participant " << participant_id << " in Room " << room_id << " position:" << std::endl;
+					ss << "X: " << position.x << std::endl;
+					ss << "Y: " << position.y << std::endl;
+					ss << "Z: " << position.z << std::endl;
+					ss << "Azimuth Heading: " << heading.azimuth_heading << std::endl;
+					ss << "Elevation Heading: " << heading.elevation_heading << std::endl;
+					stream->write_function(stream, ss.str().c_str());
+				}
+				ok = 1;
+			}
+			goto end;
+		}
+		else if (!strcmp(argv[0], "get_participant_seat")) {
+			if (argc == 3) {
+				imm_seat seat;
+				int room_id = std::stoi(argv[1]);
+				int participant_id = std::stoi(argv[2]);
+				imm_error_code error_code = imm_get_participant_seat(globals.core_handle, room_id, participant_id, &seat);
+				if (error_code == IMM_ERROR_NONE) {
+					ss << "Participant " << participant_id << " in Room " << room_id << " position:" << std::endl;
+					ss << "ID: " << seat.id << std::endl;
+					ss << "X: " << seat.position.x << std::endl;
+					ss << "Y: " << seat.position.y << std::endl;
+					ss << "Z: " << seat.position.z << std::endl;
+					ss << "Azimuth Heading: " << seat.heading.azimuth_heading << std::endl;
+					ss << "Elevation Heading: " << seat.heading.elevation_heading << std::endl;
+					stream->write_function(stream, ss.str().c_str());
+				}
+				ok = 1;
+			}
+			goto end;
+		}
+		else if (!strcmp(argv[0], "get_participant_state")) {
+			if (argc == 4) {
+				int room_id = std::stoi(argv[1]);
+				int participant_id = std::stoi(argv[2]);
+				imm_audio_control control = imm_string_to_audio_control(argv[3]);
+				int value;
+				imm_error_code error_code = imm_get_participant_state(globals.core_handle, room_id, participant_id, control, &value);
+				if (error_code == IMM_ERROR_NONE) {
+					stream->write_function(stream, std::to_string(value).c_str());
+				}
+				ok = 1;
+			}
+			goto end;
+		}
+		else if (!strcmp(argv[0], "get_participant_configuration")) {
+			if (argc == 3) {
+				int room_id = std::stoi(argv[1]);
+				int participant_id = std::stoi(argv[2]);
+				imm_participant_configuration part_config;
+				imm_error_code error_code = imm_get_participant_configuration(globals.core_handle, room_id, participant_id, &part_config);
+				if (error_code == IMM_ERROR_NONE) {
+					ss << "Participant " << participant_id << std::endl;
+					ss << "input_sampling_rate " << part_config.input_sampling_rate << std::endl;
+					ss << "input_number_channels " << part_config.input_number_channels << std::endl;
+					ss << "type " << part_config.type << std::endl;
+					stream->write_function(stream, ss.str().c_str());
+				}
+				ok = 1;
+			}
+			goto end;
+		}
+		else if (!strcmp(argv[0], "get_participant_name")) {
+			if (argc == 3) {
+				int room_id = std::stoi(argv[1]);
+				int participant_id = std::stoi(argv[2]);
+				char name[2000];
+				imm_error_code error_code = imm_get_participant_name(globals.core_handle, room_id, participant_id, name, 2000);
+				if (error_code == IMM_ERROR_NONE) {
+					stream->write_function(stream, name);
+				}
+				ok = 1;
+			}
+			goto end;
+		}
+		else if (!strcmp(argv[0], "get_participant_spherical")) {
+			if (argc == 4) {
+				int room_id = std::stoi(argv[1]);
+				int listener_id = std::stoi(argv[2]);
+				int source_id = std::stoi(argv[3]);
+				int az, el, dt;
+				imm_error_code error_code = imm_get_participant_spherical(globals.core_handle, room_id, listener_id, source_id, &az, &el, &dt);
+				if (error_code == IMM_ERROR_NONE) {
+					ss << "azimuth: " << az << std::endl;
+					ss << "elevation: " << el << std::endl;
+					ss << "distance: " << dt << std::endl;
+					stream->write_function(stream, ss.str().c_str());
+				}
+				ok = 1;
+			}
+			goto end;
+		} else if (!strcmp(argv[0], "set_log_level")) {
+			if (argc == 2) {
+				imm_set_log_level(atoi(argv[1]));
+				ok = 1;
+			}
+			goto end;
+		} else if (!strcmp(argv[0], "set_participant_seat")){
+			if (argc == 4) {
+				imm_set_participant_seat(globals.core_handle, atoi(argv[1]), atoi(argv[2]), atoi(argv[3]));
+				ok = 1;
+			}
+			goto end;
+		} else if (!strcmp(argv[0], "set_room_layout")){
+			if (argc == 3) {
+				imm_set_room_layout(globals.core_handle, atoi(argv[1]), atoi(argv[2]));
 				ok = 1;
 			}
 			goto end;
 		}
 		else if (!strcmp(argv[0], "set_all_participants_state")){
 			if (argc == 4) {
-				printf("Set all participants state:%s to %s in room: %s. \n", argv[2], argv[3], argv[1]);
-				set_all_participants_state(stream, argv[1], argv[2], argv[3]);
-				ok = 1;
-			}
-			goto end;
-		}
-		else if (!strcmp(argv[0], "get_all_participants_state")){
-			if (argc == 3) {
-				get_all_participants_state(stream, argv[1], argv[2]);
+				imm_set_all_participants_state(globals.core_handle, atoi(argv[1]), imm_string_to_audio_control(argv[2]), atoi(argv[3]));
 				ok = 1;
 			}
 			goto end;
 		}
 		else if (!strcmp(argv[0], "set_participant_state")){
 			if (argc == 5) {
-				printf("Set participant %s state:%s to %s in room: %s. \n", argv[2], argv[3], argv[4], argv[1]);
-				set_participant_state(stream, argv[1], argv[2], argv[3], argv[4]);
+				imm_set_participant_state(globals.core_handle, atoi(argv[1]), atoi(argv[2]), imm_string_to_audio_control(argv[3]), atoi(argv[4]));
 				ok = 1;
 			}
 			goto end;
 		}
-		else if (!strcmp(argv[0], "get_participant_state")){
+		else if (!strcmp(argv[0], "set_participant_position")) {
+			if (argc == 8) {
+				imm_set_participant_position(globals.core_handle, atoi(argv[1]), atoi(argv[2]), { atoi(argv[3]), atoi(argv[4]), atoi(argv[5]) }, { atoi(argv[6]), atoi(argv[7])});
+				ok = 1;
+			}
+			goto end;
+		}
+		else if (!strcmp(argv[0], "set_participant_name")) {
 			if (argc == 4) {
-				get_participant_state(stream, argv[1], argv[2], argv[3]);
+				imm_set_participant_name(globals.core_handle, atoi(argv[1]), atoi(argv[2]), argv[3]);
 				ok = 1;
 			}
 			goto end;
 		}
-		else if (!strcmp(argv[0], "get_defined_states")){
-			
-			stream->write_function(stream, "Defined participant states: %s \n", IMM_ADAPTER_PARTICIPANT_STATES);
-			ok = 1;
-			goto end;
-		}
-		else if (!strcmp(argv[0], "get_version")){
-
-			// Write the Engage core Versions
-			char value[IMM_ENGAGE_CORE_VERSION_MAX_LENGTH];
-			memset(value, 0, IMM_ENGAGE_CORE_VERSION_MAX_LENGTH);
-			imm_core_get_version(globals.core_handle, value);
-			stream->write_function(stream, value);
-
-			// Write the Adapter Version
-			memset(value, 0, IMM_ENGAGE_CORE_VERSION_MAX_LENGTH);
-			strcat(value, "Engage Adapter Version: ");
-			strcat(value, IMM_ADAPTER_VERSION);
-			strcat(value, "\n");
-			stream->write_function(stream, value);
-
-			ok = 1;
-			goto end;
-		}
+		
 	}
 
  end:
@@ -253,26 +322,30 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_imm_adapter_load)
 	memset(&globals, 0, sizeof(globals_t));
 	do_config(SWITCH_FALSE);
 
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "license file path: %s, room config file path:%s.\n", globals.license_file_path, globals.room_config_file_path);
-	globals.core_handle = create_immersitech_core(
-		globals.license_file_path, 
-		globals.room_config_file_path, 
-		globals.imm_spatial_output_audio_sample_rate, 
-		globals.imm_spatial_output_audio_frames_per_buffer,
-		immersitech_output_format::IMM_OUTPUT_FORMAT_STEREO_INTERLEAVED, // Freeswitch only uses interleaved audio
-		globals.imm_spatial_impulse_length);
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "license file path: %s\n", globals.license_file_path);
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "room config file path:%s.\n", globals.room_layout_file_path);
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "websocket config file path:%s.\n", globals.websocket_config_file_path);
+	imm_error_code error_code;
+	imm_library_configuration library_config;
+	library_config.output_number_channels = 2; // Need 2 channel output for spatial audio to work
+	library_config.output_sampling_rate = globals.imm_output_audio_sample_rate;
+	library_config.output_number_frames = globals.imm_output_audio_frames_per_buffer;
+	library_config.interleaved = true; // Freeswitch only uses interleaved audio
+	library_config.spatial_quality = globals.imm_spatial_quality;
+	imm_enable_logging(true); // Turn on logging by default to make debugging easier
+	globals.core_handle = imm_initialize_library(globals.license_file_path, globals.room_layout_file_path, globals.websocket_config_file_path, library_config, &error_code);
 
 	// Create a freeswitch event manager and add it to the core
 	mod_imm_event_manager* event_manager = new mod_imm_event_manager(globals.core_handle);
-	imm_core_add_event_manager(globals.core_handle, event_manager);
+	imm_add_event_manager(globals.core_handle, event_manager);
 
 	// Create a freeswitch logger and add it to the core
 	mod_imm_logger_handler* logger_handler = new mod_imm_logger_handler();
-	logger::get_logger()->initialize(logger_handler);
+	IMM_LOGGER->initialize(logger_handler);
 
-	// Create a websocket event manager and add it to the core (if specified to enable)
+	// Start the websocket server if the config file says it is enabled
 	if (globals.websocket_enabled) {
-		imm_core_enable_websockets(globals.core_handle, globals.websocket_config_file_path);
+		imm_enable_websockets(globals.core_handle, true);
 	}
 	
 	/* create/register custom event message type */
@@ -302,41 +375,8 @@ SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_imm_adapter_shutdown)
 {
 	switch_event_unbind_callback(conference_event_handler);
 	switch_event_free_subclass(IMM_EVENT_MAINT);
-	destroy_immersitech_core(globals.core_handle);
+	imm_destroy_library(globals.core_handle);
 	return SWITCH_STATUS_SUCCESS;
-}
-
-void create_imm_room(char* room_id, char* name, char* description) {		
-	imm_core_create_room(globals.core_handle, room_id, name, description);
-}
-
-void destroy_imm_room(char* room_id) {
-	imm_core_destroy_room(globals.core_handle, room_id);
-}
-
-void create_imm_participant(char* room_id, char* participant_id, char* participant_name, int input_sample_rate, int num_channels) {
-	// Currently hard coded to 1 input channel and regular participants only
-	imm_core_add_participant(globals.core_handle, room_id, participant_id, participant_name, input_sample_rate, num_channels, 1);
-}
-
-void remove_imm_participant(char* room_id, char* participant_id) {
-	imm_core_remove_participant(globals.core_handle, room_id, participant_id);
-}
-
-void imm_participant_stop_talking_event(char* room_id, char* participant_id) {
-	std::string message;
-	message.append("{\"participant_id\": \"");
-	message.append(participant_id);
-	message.append("\", \"action\": \"stop-talking\"}");
-	imm_core_send_custom_websocket_event(globals.core_handle, room_id, message.c_str());
-}
-
-void imm_participant_start_talking_event(char* room_id, char* participant_id) {
-	std::string message;
-	message.append("{\"participant_id\": \"");
-	message.append(participant_id);
-	message.append("\", \"action\": \"start-talking\"}");
-	imm_core_send_custom_websocket_event(globals.core_handle, room_id, message.c_str());
 }
 
 void conference_event_handler(switch_event_t *event) {
@@ -354,35 +394,50 @@ void conference_event_handler(switch_event_t *event) {
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Conference-Rate: %s\n", conference_rate);
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Conference-Channels: %s\n", conference_channels);
 
+	int room_id = atoi(conference_name);
+	int member_id = atoi(participant_id);
+
 	if(action != NULL) {
 		if(strcmp(action, "conference-create") == 0) {
 			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Create conferernce with id: %s.\n", conference_name);
-			create_imm_room(conference_name, "freeswitch conference",  "");
+			imm_create_room(globals.core_handle, room_id);
 		}
 		else if (strcmp(action, "conference-destroy") == 0) {
 			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Destroy conference with id: %s.\n", conference_name);
-			destroy_imm_room(conference_name);
+			imm_destroy_room(globals.core_handle, room_id);
 		}
 		else if (strcmp(action, "add-member") == 0) {
-			int sample_rate = atoi(conference_rate);
-			int num_channels = atoi(conference_channels);
-			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Create member with conference id: %s, member id: %s, conference sample rate: %d, channels: %d\n", conference_name, participant_id, sample_rate, num_channels);
-			create_imm_participant(conference_name, participant_id, participant_name, sample_rate, num_channels);
+			imm_participant_configuration participant_config;
+			participant_config.input_number_channels = atoi(conference_channels);
+			participant_config.input_sampling_rate = atoi(conference_rate);
+			participant_config.type = IMM_PARTICIPANT_LISTENER_ONLY;
+			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Create member with conference id: %s, member id: %s, conference sample rate: %s, channels: %s\n", conference_name, participant_id, conference_rate, conference_channels);
+			imm_add_participant(globals.core_handle, room_id, member_id, participant_name, participant_config);
 		}
 		else if ( (strcmp(action, "del-member") == 0) || (strcmp(action, "stop-recording") == 0)) {
 			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Member id: %s left conference id: %s.\n", participant_id, conference_name);
-			remove_imm_participant(conference_name, participant_id);
+			imm_remove_participant(globals.core_handle, room_id, member_id);
 		}
 		else if (strcmp(action, "start-talking") == 0) {
-			imm_participant_start_talking_event(conference_name, participant_id);
+			std::string message;
+			message.append("{\"participant_id\": \"");
+			message.append(participant_id);
+			message.append("\", \"action\": \"start-talking\"}");
+			imm_send_custom_websocket_event(globals.core_handle, room_id, message.c_str());
 		}
 		else if (strcmp(action, "stop-talking") == 0) {
-			imm_participant_stop_talking_event(conference_name, participant_id);
+			std::string message;
+			message.append("{\"participant_id\": \"");
+			message.append(participant_id);
+			message.append("\", \"action\": \"stop-talking\"}");
+			imm_send_custom_websocket_event(globals.core_handle, room_id, message.c_str());
 		}
 		else if (strcmp(action, "start-recording") == 0) { // Add a listener only participant for recording
-			int sample_rate = atoi(conference_rate);
-			int num_channels = atoi(conference_channels);
-			imm_core_add_participant(globals.core_handle, conference_name, participant_id, "recorder", sample_rate, num_channels, 3);
+			imm_participant_configuration participant_config;
+			participant_config.input_number_channels = atoi(conference_channels);
+			participant_config.input_sampling_rate = atoi(conference_rate);
+			participant_config.type = IMM_PARTICIPANT_LISTENER_ONLY;
+			imm_add_participant(globals.core_handle, room_id, member_id, "recorder", participant_config );
 		}
 	}
 }

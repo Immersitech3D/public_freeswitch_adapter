@@ -4,7 +4,7 @@
 #define IMMERSITECH_FREESWITCH_ADAPTER_H_
 
 #include <switch.h>
-#include "immersitech_core.h"
+#include "immersitech.h"
 #include "mod_imm_event_manager.h"
 #include "mod_imm_logger_handler.h"
 
@@ -19,7 +19,7 @@
 #endif
 
 #ifndef IMM_ADAPTER_VERSION
-#define IMM_ADAPTER_VERSION "v0.01.023"
+#define IMM_ADAPTER_VERSION "v0.02.006"
 #endif
 
 /**
@@ -28,13 +28,13 @@
  */
 typedef struct {
 	char* license_file_path;
-	char* room_config_file_path;
+	char* room_layout_file_path;
     char* websocket_config_file_path;
 	int websocket_enabled;
-	Immersitech_Core core_handle;
-	int imm_spatial_output_audio_sample_rate;
-    int imm_spatial_output_audio_frames_per_buffer;
-    int imm_spatial_impulse_length;
+	imm_handle core_handle;
+	int imm_output_audio_sample_rate;
+    int imm_output_audio_frames_per_buffer;
+    int imm_spatial_quality;
     int imm_max_string_length;
 } globals_t;
 extern globals_t globals;
