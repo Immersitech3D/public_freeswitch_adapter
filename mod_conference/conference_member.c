@@ -717,14 +717,7 @@ switch_status_t conference_member_add(conference_obj_t *conference, conference_m
 
 	switch_assert(conference != NULL);
 	switch_assert(member != NULL);
-	/******************************************************************/
-	/*                                                                */
-	/*            Code injection for Immersitech Adapter.             */
-	/*                                                                */
-	/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-	switch_assert(member->imm_participant == NULL);
-#endif
+
 	switch_mutex_lock(conference->mutex);
 
 	if (member->rec) {

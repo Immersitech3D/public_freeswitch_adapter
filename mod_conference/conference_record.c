@@ -320,6 +320,17 @@ void *SWITCH_THREAD_FUNC conference_record_thread_run(switch_thread_t *thread, v
 		conference_event_add_data(conference, event);
 		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Action", "start-recording");
 		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Path", rec->path);
+		
+		/******************************************************************/
+		/*                                                                */
+		/*            Code injection for Immersitech Adapter.             */
+		/*                                                                */
+		/******************************************************************/
+		switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Member-ID", "%u", member->id);
+		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Conference-Name", conference->name);
+		switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Conference-Rate", "%d", conference->rate);
+		switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Conference-Channels", "%d", conference->channels);
+		
 		switch_event_fire(&event);
 	}
 
@@ -440,6 +451,14 @@ void *SWITCH_THREAD_FUNC conference_record_thread_run(switch_thread_t *thread, v
 
 		if (file_size) switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Record-File-Size", "%s", file_size);
 		if (file_trimmed) switch_event_add_header(event, SWITCH_STACK_BOTTOM, "File-Trimmed", "%s", file_trimmed);
+
+		/******************************************************************/
+		/*                                                                */
+		/*            Code injection for Immersitech Adapter.             */
+		/*                                                                */
+		/******************************************************************/
+		switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Member-ID", "%u", member->id);
+		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Conference-Name", conference->name);
 
 		switch_event_fire(&event);
 	}

@@ -931,7 +931,6 @@ void conference_data_event_handler(switch_event_t *event)
 #if IMM_SPATIAL_AUDIO_ENABLED
 void immersitech_event_handler(switch_event_t *event)
 {
-	conference_member_t* member = NULL;
 	conference_obj_t* conference = NULL;
 
 	char* action = switch_event_get_header(event, "Action");
@@ -947,40 +946,9 @@ void immersitech_event_handler(switch_event_t *event)
 	}
 
 	if(action != NULL) {
-		if(strcmp(action, "immersitech-create-participant") == 0) {
-			int mem_id = atoi(participant_id);
-			switch_mutex_lock(conference->member_mutex);
-			for (member = conference->members; member; member = member->next) {
-				if (member->id == mem_id) {
-					break;
-				}
-			}
-			switch_mutex_unlock(conference->member_mutex);
-
-			if (member == NULL) {
-				switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Not able to get member with id: %s\n", participant_id);
-			}
-			else
-			{
-				member->imm_participant = event->event_user_data;
-				switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Set participant addressed %p to member with id:%s.\n", member->imm_participant, participant_id);
-			}
-		}
-		else if (strcmp(action, "immersitech-move-participant") == 0) {
-			char* seat_id = switch_event_get_header(event, "Seat-Id");
-			char* x = switch_event_get_header(event, "Seat-Position-X");
-			char* y = switch_event_get_header(event, "Seat-Position-Y");
-			char* z = switch_event_get_header(event, "Seat-Position-Z");
-			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Move seat_id: %s, x: %s, y: %s, z: %s.\n", seat_id, x, y, z);
-		}
-		else if (strcmp(action, "immersitech-set-participant-state") == 0) {
-			char* state_id = switch_event_get_header(event, "State-Id");
-			char* state = switch_event_get_header(event, "State");
-			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Set state_id: %s, state: %s.\n", state_id, state);
-		}
-		else if (strcmp(action, "immersitech-change-room-config") == 0) {
-			char* room_config_id = switch_event_get_header(event, "Room-Config-Id");
-			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Set room_config_id: %s.\n", room_config_id);
+		if(strcmp(action, "immersitech-create-room") == 0) {
+			conference->imm_core = event->event_user_data;
+			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Set conference immersitech core addressed %p to conference with id:%s.\n", conference->imm_core, conference->name);
 		}
 	}
 

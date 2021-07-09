@@ -1310,36 +1310,15 @@ void conference_loop_output(conference_member_t *member)
 	int sanity;
 	switch_status_t st;
 
-	/******************************************************************/
-	/*                                                                */
-	/*            Code injection for Immersitech Adapter.             */
-	/*                                                                */
-	/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-	int16_t *processed_frame;
-	char imm_participant_id[1000];
-	sprintf(imm_participant_id, "%u", member->id);
-	processed_frame = (int16_t*)switch_core_session_alloc(member->session, SWITCH_RECOMMENDED_BUFFER_SIZE);
-	memset(processed_frame, 0, SWITCH_RECOMMENDED_BUFFER_SIZE);
-#endif
 
 	switch_core_session_get_read_impl(member->session, &read_impl);
 	switch_core_session_get_real_read_impl(member->session, &real_read_impl);
 
-
 	channel = switch_core_session_get_channel(member->session);
 	interval = read_impl.microseconds_per_packet / 1000;
 
-	/******************************************************************/
-	/*                                                                */
-	/*            Code injection for Immersitech Adapter.             */
-	/*                                                                */
-	/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-	samples = switch_samples_per_packet(IMM_SPATIAL_OUTPUT_AUDIO_SAMPLE_RATE, interval);
-#else
 	samples = switch_samples_per_packet(member->conference->rate, interval);
-#endif
+
 	//csamples = samples;
 	tsamples = real_read_impl.samples_per_packet;
 	low_count = 0;
@@ -1526,26 +1505,6 @@ void conference_loop_output(conference_member_t *member)
 			}
 		}
 
-		/******************************************************************/
-		/*                                                                */
-		/*            Code injection for Immersitech Adapter.             */
-		/*                                                                */
-		/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-		if(member->imm_participant != NULL) {
-			int frame_len;
-			switch_mutex_lock(member->audio_out_mutex);
-			memset(processed_frame, 0, SWITCH_RECOMMENDED_BUFFER_SIZE);
-			frame_len = imm_core_output_audio(member->imm_participant, member->conference->name, imm_participant_id, processed_frame);
-			if(frame_len == -10000) { // only process if the immersitech library didn't return an error (-10000)
-				frame_len = (member->conference->interval * member->conference->rate) / 1000; // this calculates the output buffer size from imm library
-				switch_mux_channels((int16_t *)processed_frame, frame_len, 2, member->conference->channels);
-				switch_buffer_zero(member->mux_buffer);
-				switch_buffer_write(member->mux_buffer, processed_frame, frame_len * member->conference->channels * 2);
-			}
-			switch_mutex_unlock(member->audio_out_mutex);
-		}
-#endif
 
 		use_buffer = NULL;
 		mux_used = (uint32_t) switch_buffer_inuse(member->mux_buffer);
