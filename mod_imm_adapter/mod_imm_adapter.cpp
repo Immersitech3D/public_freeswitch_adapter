@@ -394,9 +394,15 @@ void conference_event_handler(switch_event_t *event) {
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Conference-Rate: %s\n", conference_rate);
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Conference-Channels: %s\n", conference_channels);
 
-	int room_id = atoi(conference_name);
-	int member_id = atoi(participant_id);
-
+	int room_id = -900;
+	int member_id = -900;
+	if (conference_name != NULL) {
+		room_id = atoi(conference_name);
+	}
+	if (participant_id != NULL) {
+		member_id = atoi(participant_id);
+	}
+	
 	if(action != NULL) {
 		if(strcmp(action, "conference-create") == 0) {
 			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Create conferernce with id: %s.\n", conference_name);
