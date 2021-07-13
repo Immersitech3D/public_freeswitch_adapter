@@ -416,7 +416,7 @@ void conference_event_handler(switch_event_t *event) {
 			imm_participant_configuration participant_config;
 			participant_config.input_number_channels = atoi(conference_channels);
 			participant_config.input_sampling_rate = atoi(conference_rate);
-			participant_config.type = IMM_PARTICIPANT_LISTENER_ONLY;
+			participant_config.type = IMM_PARTICIPANT_REGULAR;
 			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Create member with conference id: %s, member id: %s, conference sample rate: %s, channels: %s\n", conference_name, participant_id, conference_rate, conference_channels);
 			imm_add_participant(globals.core_handle, room_id, member_id, participant_name, participant_config);
 		}
