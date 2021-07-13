@@ -74,6 +74,7 @@
 /*            Code injection for Immersitech Adapter.             */
 /*                                                                */
 /******************************************************************/
+#if IMM_SPATIAL_AUDIO_ENABLED
 #include "../mod_imm_adapter/immersitech.h"
 
 #ifndef IMM_EVENT_MAINT
