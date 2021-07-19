@@ -69,6 +69,15 @@
 #define CONF_DBUFFER_MAX 0
 #define CONF_CHAT_PROTO "conf"
 
+/******************************************************************/
+/*                                                                */
+/*            Code injection for Immersitech Adapter.             */
+/*                                                                */
+/******************************************************************/
+#if IMM_SPATIAL_AUDIO_ENABLED
+#include "imm_processor_wrapper.h"
+#endif
+
 #ifndef MIN
 #define MIN(a, b) ((a)<(b)?(a):(b))
 #endif
@@ -771,6 +780,14 @@ typedef struct conference_relationship {
 
 /* Conference Member Object */
 struct conference_member {
+/******************************************************************/
+/*                                                                */
+/*            Code injection for Immersitech Adapter.             */
+/*                                                                */
+/******************************************************************/
+#if IMM_SPATIAL_AUDIO_ENABLED
+	imm_handle my_imm_handle;
+#endif
 	uint32_t id;
 	switch_core_session_t *session;
 	switch_channel_t *channel;

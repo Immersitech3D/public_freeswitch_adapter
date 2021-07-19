@@ -704,6 +704,15 @@ switch_status_t conference_member_add(conference_obj_t *conference, conference_m
 	switch_assert(conference != NULL);
 	switch_assert(member != NULL);
 	switch_mutex_lock(conference->mutex);
+	
+/******************************************************************/
+/*                                                                */
+/*            Code injection for Immersitech Adapter.             */
+/*                                                                */
+/******************************************************************/
+#if IMM_SPATIAL_AUDIO_ENABLED
+	member->my_imm_handle = create_immersitech_processor();
+#endif
 
 	if (member->rec) {
 		conference->recording_members++;
@@ -1179,6 +1188,15 @@ switch_status_t conference_member_del(conference_obj_t *conference, conference_m
 	lock_member(member);
 
 	conference_member_del_relationship(member, 0);
+
+/******************************************************************/
+/*                                                                */
+/*            Code injection for Immersitech Adapter.             */
+/*                                                                */
+/******************************************************************/
+#if IMM_SPATIAL_AUDIO_ENABLED
+	destroy_immersitech_processor(member->my_imm_handle);
+#endif
 
 	conference_cdr_del(member);
 	

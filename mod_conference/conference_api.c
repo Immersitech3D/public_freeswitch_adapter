@@ -124,8 +124,39 @@ api_command_t conference_api_sub_commands[] = {
 	{"vid-fgimg", (void_fn_t) & conference_api_sub_canvas_fgimg, CONF_API_SUB_ARGS_SPLIT, "vid-fgimg", "<file> | clear [<canvas-id>]"},
 	{"vid-bgimg", (void_fn_t) & conference_api_sub_canvas_bgimg, CONF_API_SUB_ARGS_SPLIT, "vid-bgimg", "<file> | clear [<canvas-id>]"},
 	{"vid-bandwidth", (void_fn_t) & conference_api_sub_vid_bandwidth, CONF_API_SUB_ARGS_SPLIT, "vid-bandwidth", "<BW>"},
-	{"vid-personal", (void_fn_t) & conference_api_sub_vid_personal, CONF_API_SUB_ARGS_SPLIT, "vid-personal", "[on|off]"}
+	{"vid-personal", (void_fn_t) & conference_api_sub_vid_personal, CONF_API_SUB_ARGS_SPLIT, "vid-personal", "[on|off]"},
+	{"imm-set-state", (void_fn_t) & conference_api_sub_imm_set_state, CONF_API_SUB_ARGS_SPLIT, "imm-set-state", "<member_id>", "<imm_audio_control>", "<value>"}	
 };
+/******************************************************************/
+/*                                                                */
+/*            Code injection for Immersitech Adapter.             */
+/*                                                                */
+/******************************************************************/
+#if IMM_SPATIAL_AUDIO_ENABLED
+switch_status_t conference_api_sub_imm_set_state(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv) {
+	// We require the format "conference imm-set-state 1 3 2" which is 4
+	// argv[1] is "imm-set-state"
+	// argv[2] is <member-id>
+	// argv[3] is <imm_audio_control> as string
+	// argv[4] is <value> as integer
+	if (argc == 4) {
+		uint32_t id = atoi(argv[2]);
+		conference_member_t *member;
+
+		if ((member = conference_member_get(conference, id))) {
+			imm_audio_control control = imm_string_to_audio_control(argv[3]);
+			imm_error_code error_code = immersitech_set_state(member->my_imm_handle, control, atoi(argv[4]));
+			if (error_code == IMM_ERROR_NONE){
+				return SWITCH_STATUS_SUCCESS;
+			}
+			stream->write_function(stream, "-ERR Immersitech set state: %s\n", imm_error_code_to_string(error_code));
+		} else {
+			stream->write_function(stream, "-ERR Member: %u not found.\n", id);
+		}
+	}
+}
+#endif
+
 
 switch_status_t conference_api_sub_pause_play(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv)
 {
