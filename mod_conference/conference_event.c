@@ -748,15 +748,6 @@ switch_status_t conference_event_add_data(conference_obj_t *conference, switch_e
 	switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Conference-Ghosts", "%u", conference->count_ghosts);
 	switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Conference-Profile-Name", conference->profile_name);
 	switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Conference-Unique-ID", conference->uuid_str);
-	/******************************************************************/
-	/*                                                                */
-	/*            Code injection for Immersitech Adapter.             */
-	/*                                                                */
-	/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-	switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Conference-Rate", "%d", conference->rate);
-	switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Conference-Channels", "%d", conference->channels);
-#endif
 	switch_event_merge(event, conference->variables);
 
 	return status;
@@ -923,39 +914,6 @@ void conference_data_event_handler(switch_event_t *event)
 	}
 }
 
-/******************************************************************/
-/*                                                                */
-/*            Code injection for Immersitech Adapter.             */
-/*                                                                */
-/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-void immersitech_event_handler(switch_event_t *event)
-{
-	conference_obj_t* conference = NULL;
-
-	char* action = switch_event_get_header(event, "Action");
-	char* room_id = switch_event_get_header(event, "Room-Id");
-	char* participant_id = switch_event_get_header(event, "Participant-Id");
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Action name: %s\n", action);
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Room-Id: %s\n", room_id);
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Participant-Id: %s\n", participant_id);
-
-	if (!(conference = conference_find(room_id, NULL))) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Could not find conference named:%s.\n", room_id);
-		return;
-	}
-
-	if(action != NULL) {
-		if(strcmp(action, "immersitech-create-room") == 0) {
-			conference->imm_core = event->event_user_data;
-			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Set conference immersitech core addressed %p to conference with id:%s.\n", conference->imm_core, conference->name);
-		}
-	}
-
-	switch_thread_rwlock_unlock(conference->rwlock);
-
-}
-#endif
 
 void conference_event_pres_handler(switch_event_t *event)
 {

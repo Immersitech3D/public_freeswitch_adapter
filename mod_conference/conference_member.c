@@ -247,9 +247,6 @@ switch_status_t conference_member_add_event_data(conference_member_t *member, sw
 
 	if (member->session) {
 		switch_channel_t *channel = switch_core_session_get_channel(member->session);
-#if IMM_SPATIAL_AUDIO_ENABLED
-		switch_caller_profile_t *profile;
-#endif
 
 		if (member->verbose_events) {
 			switch_channel_event_set_data(channel, event);
@@ -259,17 +256,6 @@ switch_status_t conference_member_add_event_data(conference_member_t *member, sw
 		switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Video", "%s",
 								switch_channel_test_flag(switch_core_session_get_channel(member->session), CF_VIDEO) ? "true" : "false" );
 
-		/******************************************************************/
-		/*                                                                */
-		/*            Code injection for Immersitech Adapter.             */
-		/*                                                                */
-		/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-		profile = switch_channel_get_caller_profile(channel);
-		if(profile != NULL) {
-			switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Member-Name", "%s", profile->caller_id_name);
-		}
-#endif
 	}
 
 	switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Hear", "%s", conference_utils_member_test_flag(member, MFLAG_CAN_HEAR) ? "true" : "false" );
@@ -717,7 +703,6 @@ switch_status_t conference_member_add(conference_obj_t *conference, conference_m
 
 	switch_assert(conference != NULL);
 	switch_assert(member != NULL);
-
 	switch_mutex_lock(conference->mutex);
 
 	if (member->rec) {
@@ -1814,30 +1799,6 @@ int conference_member_setup_media(conference_member_t *member, conference_obj_t 
 	}
 
 
-/******************************************************************/
-/*                                                                */
-/*            Code injection for Immersitech Adapter.             */
-/*                                                                */
-/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-	/* Setup a Signed Linear codec for writing audio. */
-	if (switch_core_codec_init(&member->write_codec,
-							   "L16",
-							   NULL,
-							   NULL,
-							   IMM_SPATIAL_OUTPUT_AUDIO_SAMPLE_RATE,
-							   read_impl.microseconds_per_packet / 1000,
-							   read_impl.number_of_channels,
-							   SWITCH_CODEC_FLAG_ENCODE | SWITCH_CODEC_FLAG_DECODE, NULL, member->pool) == SWITCH_STATUS_SUCCESS) {
-		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(member->session), SWITCH_LOG_DEBUG,
-						  "Raw Codec Activation Success L16@%uhz %d channel %dms\n",
-						  IMM_SPATIAL_OUTPUT_AUDIO_SAMPLE_RATE, conference->channels, read_impl.microseconds_per_packet / 1000);
-	} else {
-		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(member->session), SWITCH_LOG_DEBUG, "Raw Codec Activation Failed L16@%uhz %d channel %dms\n",
-						  IMM_SPATIAL_OUTPUT_AUDIO_SAMPLE_RATE, conference->channels, read_impl.microseconds_per_packet / 1000);
-		goto codec_done2;
-	}
-#else
 	/* Setup a Signed Linear codec for writing audio. */
 	if (switch_core_codec_init(&member->write_codec,
 							   "L16",
@@ -1855,7 +1816,6 @@ int conference_member_setup_media(conference_member_t *member, conference_obj_t 
 						  conference->rate, conference->channels, read_impl.microseconds_per_packet / 1000);
 		goto codec_done2;
 	}
-#endif
 
 	/* Setup an audio buffer for the incoming audio */
 	if (!member->audio_buffer && switch_buffer_create_dynamic(&member->audio_buffer, CONF_DBLOCK_SIZE, CONF_DBUFFER_SIZE, CONF_DBUFFER_MAX) != SWITCH_STATUS_SUCCESS) {

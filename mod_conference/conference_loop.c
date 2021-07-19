@@ -1310,15 +1310,13 @@ void conference_loop_output(conference_member_t *member)
 	int sanity;
 	switch_status_t st;
 
-
 	switch_core_session_get_read_impl(member->session, &read_impl);
 	switch_core_session_get_real_read_impl(member->session, &real_read_impl);
 
+
 	channel = switch_core_session_get_channel(member->session);
 	interval = read_impl.microseconds_per_packet / 1000;
-
 	samples = switch_samples_per_packet(member->conference->rate, interval);
-
 	//csamples = samples;
 	tsamples = real_read_impl.samples_per_packet;
 	low_count = 0;
@@ -1504,7 +1502,6 @@ void conference_loop_output(conference_member_t *member)
 				switch_channel_answer(channel);
 			}
 		}
-
 
 		use_buffer = NULL;
 		mux_used = (uint32_t) switch_buffer_inuse(member->mux_buffer);

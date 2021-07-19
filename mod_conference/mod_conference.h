@@ -69,30 +69,6 @@
 #define CONF_DBUFFER_MAX 0
 #define CONF_CHAT_PROTO "conf"
 
-/******************************************************************/
-/*                                                                */
-/*            Code injection for Immersitech Adapter.             */
-/*                                                                */
-/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-#include "../mod_imm_adapter/immersitech.h"
-
-#ifndef IMM_EVENT_MAINT
-#define IMM_EVENT_MAINT "immersitech::maintenance"
-#endif
-#ifndef IMM_EVENT_CDR
-#define IMM_EVENT_CDR "immersitech::cdr"
-#endif
-
-#ifndef IMM_SPATIAL_AUDIO_ENABLED
-#define IMM_SPATIAL_AUDIO_ENABLED 1
-#endif
-
-#ifndef IMM_SPATIAL_OUTPUT_AUDIO_SAMPLE_RATE
-#define IMM_SPATIAL_OUTPUT_AUDIO_SAMPLE_RATE 48000
-#endif
-#endif
-
 #ifndef MIN
 #define MIN(a, b) ((a)<(b)?(a):(b))
 #endif
@@ -784,13 +760,6 @@ typedef struct conference_obj {
 	char *default_layout_name;
 	int mux_paused;
 	char *video_codec_config_profile_name;
-	
-	/******************************************************************/
-	/*                                                                */
-	/*            Code injection for Immersitech Adapter.             */
-	/*                                                                */
-	/******************************************************************/
-	void* imm_core;
 } conference_obj_t;
 
 /* Relationship with another member */
@@ -935,7 +904,6 @@ struct conference_member {
 	mcu_layer_cam_opts_t cam_opts;
 	switch_core_video_filter_t video_filters;
 	int video_manual_border;
-
 };
 
 typedef enum {
@@ -1029,16 +997,6 @@ void conference_utils_clear_eflags(char *events, uint32_t *f);
 void conference_event_pres_handler(switch_event_t *event);
 void conference_data_event_handler(switch_event_t *event);
 void conference_event_call_setup_handler(switch_event_t *event);
-
-/******************************************************************/
-/*                                                                */
-/*            Code injection for Immersitech Adapter.             */
-/*                                                                */
-/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-void immersitech_event_handler(switch_event_t *event);
-#endif
-
 void conference_member_add_file_data(conference_member_t *member, int16_t *data, switch_size_t file_data_len);
 void conference_send_notify(conference_obj_t *conference, const char *status, const char *call_id, switch_bool_t final);
 switch_status_t conference_file_close(conference_obj_t *conference, conference_file_node_t *node);

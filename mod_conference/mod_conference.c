@@ -218,21 +218,8 @@ void *SWITCH_THREAD_FUNC conference_thread_run(switch_thread_t *thread, void *ob
 	uint8_t *async_file_frame;
 	int16_t *bptr;
 	uint32_t x = 0;
-#if !IMM_SPATIAL_AUDIO_ENABLED
 	int32_t z = 0;
-#endif
 	conference_cdr_node_t *np;
-	/******************************************************************/
-	/*                                                                */
-	/*            Code injection for Immersitech Adapter.             */
-	/*                                                                */
-	/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-	int16_t *processed_frame;
-	int frame_len = (conference->interval * conference->rate) / 1000; // this calculates the output buffer size from imm library
-	processed_frame = (int16_t*)switch_core_alloc(conference->pool, SWITCH_RECOMMENDED_BUFFER_SIZE);
-	memset(processed_frame, 0, SWITCH_RECOMMENDED_BUFFER_SIZE);
-#endif
 
 	file_frame = switch_core_alloc(conference->pool, SWITCH_RECOMMENDED_BUFFER_SIZE);
 	async_file_frame = switch_core_alloc(conference->pool, SWITCH_RECOMMENDED_BUFFER_SIZE);
@@ -577,9 +564,7 @@ void *SWITCH_THREAD_FUNC conference_thread_run(switch_thread_t *thread, void *ob
 		if (ready || has_file_data) {
 			/* Use more bits in the main_frame to preserve the exact sum of the audio samples. */
 			int main_frame[SWITCH_RECOMMENDED_BUFFER_SIZE] = { 0 };
-#if !IMM_SPATIAL_AUDIO_ENABLED
 			int16_t write_frame[SWITCH_RECOMMENDED_BUFFER_SIZE] = { 0 };
-#endif
 
 
 			/* Init the main frame with file data if there is any. */
@@ -606,21 +591,11 @@ void *SWITCH_THREAD_FUNC conference_thread_run(switch_thread_t *thread, void *ob
 				if (!(conference_utils_member_test_flag(omember, MFLAG_RUNNING) && conference_utils_member_test_flag(omember, MFLAG_HAS_AUDIO))) {
 					continue;
 				}
-				
-				/******************************************************************/
-				/*                                                                */
-				/*            Code injection for Immersitech Adapter.             */
-				/*                                                                */
-				/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-				imm_input_audio_short(conference->imm_core, atoi(conference->name), omember->id, (int16_t*) omember->frame, omember->read / 2 / conference->channels);
-#else
+
 				bptr = (int16_t *) omember->frame;
 				for (x = 0; x < omember->read / 2; x++) {
 					main_frame[x] += (int32_t) bptr[x];
 				}
-#endif			
-				
 			}
 
 			/* Create write frame once per member who is not deaf for each sample in the main frame
@@ -629,30 +604,13 @@ void *SWITCH_THREAD_FUNC conference_thread_run(switch_thread_t *thread, void *ob
 			   cut it off at the min and max range if need be and write the frame to the output buffer.
 			*/
 			for (omember = conference->members; omember; omember = omember->next) {
-#if !IMM_SPATIAL_AUDIO_ENABLED
 				switch_size_t ok = 1;
-#endif
 
 				if (!conference_utils_member_test_flag(omember, MFLAG_RUNNING) ||
 					(!conference_utils_member_test_flag(omember, MFLAG_NOCHANNEL) && !switch_channel_test_flag(omember->channel, CF_AUDIO))) {
 					continue;
 				}
 				
-				/******************************************************************/
-				/*                                                                */
-				/*            Code injection for Immersitech Adapter.             */
-				/*                                                                */
-				/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED			
-				switch_mutex_lock(omember->audio_out_mutex);
-				memset(processed_frame, 0, SWITCH_RECOMMENDED_BUFFER_SIZE);
-				if (imm_output_audio_short(conference->imm_core, atoi(conference->name), omember->id, processed_frame) == IMM_ERROR_NONE) {
-					switch_mux_channels((int16_t *)processed_frame, frame_len, 2, conference->channels);
-					switch_buffer_zero(omember->mux_buffer);
-					switch_buffer_write(omember->mux_buffer, processed_frame, frame_len * conference->channels * 2);
-				}
-				switch_mutex_unlock(omember->audio_out_mutex);
-#else
 				if (!conference_utils_member_test_flag(omember, MFLAG_CAN_HEAR)) {
 					switch_mutex_lock(omember->audio_out_mutex);
 					memset(write_frame, 255, bytes);
@@ -718,7 +676,6 @@ void *SWITCH_THREAD_FUNC conference_thread_run(switch_thread_t *thread, void *ob
 						goto end;
 					}
 				}
-#endif
 			}
 		} else { /* There is no source audio.  Push silence into all of the buffers */
 			int16_t write_frame[SWITCH_RECOMMENDED_BUFFER_SIZE] = { 0 };
@@ -738,27 +695,7 @@ void *SWITCH_THREAD_FUNC conference_thread_run(switch_thread_t *thread, void *ob
 				}
 
 				switch_mutex_lock(omember->audio_out_mutex);
-				/******************************************************************/
-				/*                                                                */
-				/*            Code injection for Immersitech Adapter.             */
-				/*                                                                */
-				/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-				// We have this immersitech output here because if you have put audio data in through the websocket API or other means,
-				// then freeswitch believes there is no input data when there actually is.
-				// If there is actually no input data, imm_core_output_audio will zero the output buffer for us anyway
-				memset(processed_frame, 0, SWITCH_RECOMMENDED_BUFFER_SIZE);
-				if (imm_output_audio_short(conference->imm_core, atoi(conference->name), omember->id, processed_frame) == IMM_ERROR_NONE) {
-					switch_mux_channels((int16_t *)processed_frame, frame_len, 2, conference->channels);
-					switch_buffer_zero(omember->mux_buffer);
-					switch_buffer_write(omember->mux_buffer, processed_frame, frame_len * conference->channels * 2);
-				}
-				else {
-					ok = switch_buffer_write(omember->mux_buffer, write_frame, bytes);
-				}
-#else
 				ok = switch_buffer_write(omember->mux_buffer, write_frame, bytes);
-#endif
 				switch_mutex_unlock(omember->audio_out_mutex);
 
 				if (!ok) {
@@ -4032,17 +3969,6 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_conference_load)
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Couldn't subscribe to conference data query events!\n");
 	}
 
-/******************************************************************/
-/*                                                                */
-/*            Code injection for Immersitech Adapter.             */
-/*                                                                */
-/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-	if (switch_event_bind(modname, SWITCH_EVENT_CUSTOM, IMM_EVENT_MAINT, immersitech_event_handler, NULL) != SWITCH_STATUS_SUCCESS) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Couldn't subscribe to immersitech events!\n");
-	}
-#endif
-
 	SWITCH_ADD_API(api_interface, "conference", "Conference module commands", conference_api_main, p);
 	SWITCH_ADD_APP(app_interface, mod_conference_app_name, mod_conference_app_name, NULL, conference_function, NULL, SAF_SUPPORT_TEXT_ONLY);
 	SWITCH_ADD_APP(app_interface, "conference_set_auto_outcall", "conference_set_auto_outcall", NULL, conference_auto_function, NULL, SAF_NONE);
@@ -4078,14 +4004,6 @@ SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_conference_shutdown)
 		switch_event_unbind_callback(conference_event_pres_handler);
 		switch_event_unbind_callback(conference_data_event_handler);
 		switch_event_unbind_callback(conference_event_call_setup_handler);
-		/******************************************************************/
-		/*                                                                */
-		/*            Code injection for Immersitech Adapter.             */
-		/*                                                                */
-		/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-		switch_event_unbind_callback(immersitech_event_handler);
-#endif
 		switch_event_free_subclass(CONF_EVENT_MAINT);
 
 		/* free api interface help ".syntax" field string */
