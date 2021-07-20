@@ -19,7 +19,7 @@ participant IDs, room IDs, or an other extra features from the full featured lib
 #define IMM_NUMBER_FRAMES 960
 #define IMM_SAMPLING_RATE 48000
 #define IMM_NUMBER_CHANNELS 2
-#define IMM_SPATIAL_QUALITY 5
+#define IMM_SPATIAL_QUALITY 1
 
 // Set these paths to match your local file system and file names
 // You can enter a room layout and websocket path if later you decide to use them

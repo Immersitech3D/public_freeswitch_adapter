@@ -23,8 +23,9 @@ imm_handle create_immersitech_processor() {
 	imm_participant_configuration participant_config;
 	participant_config.input_number_channels = IMM_NUMBER_CHANNELS;
 	participant_config.input_sampling_rate = IMM_SAMPLING_RATE;
-	participant_config.type = IMM_PARTICIPANT_REGULAR;
+	participant_config.type = IMM_PARTICIPANT_SOURCE_ONLY;
 	imm_add_participant(handle, IMM_PROCESSOR_ROOM_ID, IMM_PROCESSOR_INPUT_ID, "input", participant_config);
+	participant_config.type = IMM_PARTICIPANT_LISTENER_ONLY;
 	imm_add_participant(handle, IMM_PROCESSOR_ROOM_ID, IMM_PROCESSOR_OUTPUT_ID, "output", participant_config);
 	return handle;
 }
