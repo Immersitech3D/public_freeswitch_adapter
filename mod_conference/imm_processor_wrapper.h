@@ -36,6 +36,7 @@ void immersitech_process(imm_handle handle, short* input, int num_in_frames, sho
 
 // Change the audio effects states at any time
 imm_error_code immersitech_set_state(imm_handle handle, imm_audio_control control, int value);
+imm_error_code immersitech_get_state(imm_handle handle, imm_audio_control control, int* value);
 
 // Print information about the library
 void print_library_info(imm_handle handle);

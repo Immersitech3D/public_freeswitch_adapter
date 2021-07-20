@@ -48,6 +48,10 @@ imm_error_code immersitech_set_state(imm_handle handle, imm_audio_control contro
 	return imm_set_all_participants_state(handle, IMM_PROCESSOR_ROOM_ID, control, value);
 }
 
+imm_error_code immersitech_get_state(imm_handle handle, imm_audio_control control, int* value) {
+	return imm_get_participant_state(handle, IMM_PROCESSOR_INPUT_ID, control, value);
+}
+
 void print_library_info(imm_handle handle) {
 	imm_library_configuration config;
 	printf("Immersitech Library Information:\n");

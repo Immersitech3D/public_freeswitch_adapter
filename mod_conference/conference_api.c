@@ -124,8 +124,17 @@ api_command_t conference_api_sub_commands[] = {
 	{"vid-fgimg", (void_fn_t) & conference_api_sub_canvas_fgimg, CONF_API_SUB_ARGS_SPLIT, "vid-fgimg", "<file> | clear [<canvas-id>]"},
 	{"vid-bgimg", (void_fn_t) & conference_api_sub_canvas_bgimg, CONF_API_SUB_ARGS_SPLIT, "vid-bgimg", "<file> | clear [<canvas-id>]"},
 	{"vid-bandwidth", (void_fn_t) & conference_api_sub_vid_bandwidth, CONF_API_SUB_ARGS_SPLIT, "vid-bandwidth", "<BW>"},
-	{"vid-personal", (void_fn_t) & conference_api_sub_vid_personal, CONF_API_SUB_ARGS_SPLIT, "vid-personal", "[on|off]"},
-	{"imm-set-state", (void_fn_t) & conference_api_sub_imm_set_state, CONF_API_SUB_ARGS_SPLIT, "imm-set-state", "<member_id> <imm_audio_control> <value>"}	
+	{"vid-personal", (void_fn_t) & conference_api_sub_vid_personal, CONF_API_SUB_ARGS_SPLIT, "vid-personal", "[on|off]"}
+/******************************************************************/
+/*                                                                */
+/*            Code injection for Immersitech Adapter.             */
+/*                                                                */
+/******************************************************************/
+#if IMM_SPATIAL_AUDIO_ENABLED
+	,
+	{"imm-set-state", (void_fn_t) & conference_api_sub_imm_set_state, CONF_API_SUB_ARGS_SPLIT, "imm-set-state", "<[member_id|all]|last|non_moderator> <imm_audio_control> <value>"},	
+	{"imm-get-state", (void_fn_t) & conference_api_sub_imm_get_state, CONF_API_SUB_MEMBER_TARGET, "imm-get-state", "<[member_id|all]|last|non_moderator> <imm_audio_control>"}	
+#endif
 };
 /******************************************************************/
 /*                                                                */
@@ -134,9 +143,9 @@ api_command_t conference_api_sub_commands[] = {
 /******************************************************************/
 #if IMM_SPATIAL_AUDIO_ENABLED
 switch_status_t conference_api_sub_imm_set_state(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv) {
-	// We require the format "conference imm-set-state 1 3 2" which is 4
+	// We require the format "conference <conference-name> imm-set-state <member_id> <control> <value>" which is 4 arguements
 	// argv[1] is "imm-set-state"
-	// argv[2] is <member-id>
+	// argv[2] is <member-id> as integer
 	// argv[3] is <imm_audio_control> as string
 	// argv[4] is <value> as integer
 	if (argc == 4) {
@@ -157,8 +166,26 @@ switch_status_t conference_api_sub_imm_set_state(conference_obj_t *conference, s
 	
 	return SWITCH_STATUS_GENERR;
 }
-#endif
 
+switch_status_t conference_api_sub_imm_get_state(conference_member_t *member, switch_stream_handle_t *stream, void *data) {
+	// We require the format "conference <conference-name> imm-get-state <member_id> control"
+	if (member == NULL || data == NULL)
+		return SWITCH_STATUS_GENERR;
+	
+	int value;
+	imm_audio_control control = imm_string_to_audio_control( (char*) data );
+	imm_error_code error_code = immersitech_get_state(member->my_imm_handle, imm_audio_control control, &value);
+	
+	if(stream != NULL)	
+		if(error_code == IMM_ERROR_NONE)
+			stream->write_function(stream, "Member %u %s: %i\n", member->id, (char*)data, value);
+			return SWITCH_STATUS_SUCCESS;
+		else
+			stream->write_function(stream, "-ERR Immersitech set state: %s\n", imm_error_code_to_string(error_code));
+	
+	return SWITCH_STATUS_GENERR;
+}
+#endif
 
 switch_status_t conference_api_sub_pause_play(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv)
 {
