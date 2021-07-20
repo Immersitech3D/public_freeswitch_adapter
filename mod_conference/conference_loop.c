@@ -1239,7 +1239,7 @@ void *SWITCH_THREAD_FUNC conference_loop_input(switch_thread_t *thread, void *ob
 /*                                                                */
 /******************************************************************/
 #if IMM_SPATIAL_AUDIO_ENABLED
-				immersitech_process(member->my_imm_handle, tmp_frame.data, tmp_frame.datalen, tmp_frame.data);
+				immersitech_process(member->my_imm_handle, (int16_t*)tmp_frame.data, tmp_frame.datalen / 2 / member->conference->channels, (int16_t*)tmp_frame.data);
 #endif
 				
 				/* Write the audio into the input buffer */
