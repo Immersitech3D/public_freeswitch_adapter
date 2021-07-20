@@ -132,7 +132,7 @@ api_command_t conference_api_sub_commands[] = {
 /******************************************************************/
 #if IMM_SPATIAL_AUDIO_ENABLED
 	,
-	{"imm-set-state", (void_fn_t) & conference_api_sub_imm_set_state, CONF_API_SUB_ARGS_SPLIT, "imm-set-state", "<[member_id|all]|last|non_moderator> <imm_audio_control> <value>"},	
+	{"imm-set-state", (void_fn_t) & conference_api_sub_imm_set_state, CONF_API_SUB_ARGS_SPLIT, "imm-set-state", "<member_id> <imm_audio_control> <value>"},	
 	{"imm-get-state", (void_fn_t) & conference_api_sub_imm_get_state, CONF_API_SUB_MEMBER_TARGET, "imm-get-state", "<[member_id|all]|last|non_moderator> <imm_audio_control>"}	
 #endif
 };
@@ -148,7 +148,7 @@ switch_status_t conference_api_sub_imm_set_state(conference_obj_t *conference, s
 	// argv[2] is <member-id> as integer
 	// argv[3] is <imm_audio_control> as string
 	// argv[4] is <value> as integer
-	if (argc == 4) {
+	if (argc == 5) {
 		uint32_t id = atoi(argv[2]);
 		conference_member_t *member;
 
