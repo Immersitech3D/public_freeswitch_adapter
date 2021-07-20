@@ -8,7 +8,7 @@ imm_handle create_immersitech_processor() {
 	imm_error_code error_code;
 	imm_library_configuration config;
 	imm_participant_configuration participant_config;
-	imm_handle handle
+	imm_handle handle;
 	
 	// Let us log to freeswitch as it is easier to debug
 	imm_enable_logging(true);
@@ -49,10 +49,11 @@ imm_error_code immersitech_set_state(imm_handle handle, imm_audio_control contro
 }
 
 void print_library_info(imm_handle handle) {
+	imm_library_configuration config;
 	printf("Immersitech Library Information:\n");
 	printf("Version: %s\n", imm_get_version());
 	printf("License: %s\n", imm_get_license_info(handle));
-	imm_library_configuration config = imm_get_library_configuration(handle);
+	config = imm_get_library_configuration(handle);
 	printf("Interleaved: %d\n", config.interleaved);
 	printf("Number Channels: %i\n", config.output_number_channels);
 	printf("Number Frames: %i\n", config.output_number_frames);
