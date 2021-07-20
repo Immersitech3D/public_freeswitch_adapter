@@ -170,11 +170,13 @@ switch_status_t conference_api_sub_imm_set_state(conference_obj_t *conference, s
 switch_status_t conference_api_sub_imm_get_state(conference_member_t *member, switch_stream_handle_t *stream, void *data) {
 	// We require the format "conference <conference-name> imm-get-state <member_id> control"
 	int value;
+	imm_audio_control control;
+	imm_error_code error_code;
 	if (member == NULL || data == NULL)
 		return SWITCH_STATUS_GENERR;
 	
-	imm_audio_control control = imm_string_to_audio_control( (char*) data );
-	imm_error_code error_code = immersitech_get_state(member->my_imm_handle, control, &value);
+	control = imm_string_to_audio_control( (char*) data );
+	error_code = immersitech_get_state(member->my_imm_handle, control, &value);
 	
 	if(stream != NULL) {
 		if(error_code == IMM_ERROR_NONE) {
