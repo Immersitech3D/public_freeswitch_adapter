@@ -1278,6 +1278,14 @@ switch_status_t conference_api_dispatch(conference_obj_t *conference, switch_str
 switch_status_t conference_api_sub_syntax(char **syntax);
 switch_status_t conference_api_main_real(const char *cmd, switch_core_session_t *session, switch_stream_handle_t *stream);
 switch_status_t conference_api_set_moh(conference_obj_t *conference, const char *what);
+/******************************************************************/
+/*                                                                */
+/*            Code injection for Immersitech Adapter.             */
+/*                                                                */
+/******************************************************************/
+#if IMM_SPATIAL_AUDIO_ENABLED
+switch_status_t conference_api_sub_imm_set_state(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv);
+#endif
 
 void conference_loop_mute_on(conference_member_t *member, caller_control_action_t *action);
 void conference_loop_mute_toggle(conference_member_t *member, caller_control_action_t *action);

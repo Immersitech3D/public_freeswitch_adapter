@@ -125,7 +125,7 @@ api_command_t conference_api_sub_commands[] = {
 	{"vid-bgimg", (void_fn_t) & conference_api_sub_canvas_bgimg, CONF_API_SUB_ARGS_SPLIT, "vid-bgimg", "<file> | clear [<canvas-id>]"},
 	{"vid-bandwidth", (void_fn_t) & conference_api_sub_vid_bandwidth, CONF_API_SUB_ARGS_SPLIT, "vid-bandwidth", "<BW>"},
 	{"vid-personal", (void_fn_t) & conference_api_sub_vid_personal, CONF_API_SUB_ARGS_SPLIT, "vid-personal", "[on|off]"},
-	{"imm-set-state", (void_fn_t) & conference_api_sub_imm_set_state, CONF_API_SUB_ARGS_SPLIT, "imm-set-state", "<member_id>", "<imm_audio_control>", "<value>"}	
+	{"imm-set-state", (void_fn_t) & conference_api_sub_imm_set_state, CONF_API_SUB_ARGS_SPLIT, "imm-set-state", "<member_id> <imm_audio_control> <value>"}	
 };
 /******************************************************************/
 /*                                                                */
@@ -154,6 +154,8 @@ switch_status_t conference_api_sub_imm_set_state(conference_obj_t *conference, s
 			stream->write_function(stream, "-ERR Member: %u not found.\n", id);
 		}
 	}
+	
+	return SWITCH_STATUS_GENERR;
 }
 #endif
 
