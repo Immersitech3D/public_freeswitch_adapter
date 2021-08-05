@@ -952,6 +952,15 @@ void *SWITCH_THREAD_FUNC conference_loop_input(switch_thread_t *thread, void *ob
 			int gate_check = 0;
 			int score_iir = 0;
 			
+/******************************************************************/
+/*                                                                */
+/*            Code injection for Immersitech Adapter.             */
+/*                                                                */
+/******************************************************************/
+#if IMM_SPATIAL_AUDIO_ENABLED
+			immersitech_process(member->my_imm_handle, (int16_t*)read_frame->data, read_frame->datalen / 2, (int16_t*)read_frame->data);
+#endif
+			
 			data = read_frame->data;
 			member->score = 0;
 
@@ -1232,15 +1241,6 @@ void *SWITCH_THREAD_FUNC conference_loop_input(switch_thread_t *thread, void *ob
 
 			if (datalen) {
 				switch_size_t ok = 1;
-				
-/******************************************************************/
-/*                                                                */
-/*            Code injection for Immersitech Adapter.             */
-/*                                                                */
-/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-				immersitech_process(member->my_imm_handle, (int16_t*)tmp_frame.data, tmp_frame.datalen / 2 / member->conference->channels, (int16_t*)tmp_frame.data);
-#endif
 				
 				/* Write the audio into the input buffer */
 				switch_mutex_lock(member->audio_in_mutex);

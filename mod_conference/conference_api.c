@@ -155,6 +155,7 @@ switch_status_t conference_api_sub_imm_set_state(conference_obj_t *conference, s
 		if ((member = conference_member_get(conference, id))) {
 			imm_audio_control control = imm_string_to_audio_control(argv[3]);
 			imm_error_code error_code = immersitech_set_state(member->my_imm_handle, control, atoi(argv[4]));
+			switch_thread_rwlock_unlock(member->rwlock);
 			if (error_code == IMM_ERROR_NONE){
 				return SWITCH_STATUS_SUCCESS;
 			}
