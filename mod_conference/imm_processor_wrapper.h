@@ -16,9 +16,6 @@ participant IDs, room IDs, or an other extra features from the full featured lib
 #include <stdio.h>
 
 // Set these parameters to match your conference settings
-#define IMM_NUMBER_FRAMES 960
-#define IMM_SAMPLING_RATE 48000
-#define IMM_NUMBER_CHANNELS 2
 #define IMM_SPATIAL_QUALITY 1
 
 // Set these paths to match your local file system and file names
@@ -28,7 +25,8 @@ participant IDs, room IDs, or an other extra features from the full featured lib
 #define IMM_WEBSOCKET_PATH NULL
 
 // Create / Destroy your immersitech processor
-imm_handle create_immersitech_processor();
+// Note that interval is the conference internal in milliseconds, such as 20 milliseconds.
+imm_handle create_immersitech_processor(int sampling_rate, int number_of_channels, int interval);
 void destroy_immersitech_processor(imm_handle handle);
 
 // Process your audio directly through the processor

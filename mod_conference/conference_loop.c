@@ -958,7 +958,9 @@ void *SWITCH_THREAD_FUNC conference_loop_input(switch_thread_t *thread, void *ob
 /*                                                                */
 /******************************************************************/
 #if IMM_SPATIAL_AUDIO_ENABLED
-			immersitech_process(member->my_imm_handle, (int16_t*)read_frame->data, read_frame->datalen / 2, (int16_t*)read_frame->data);
+			// read_frame has datalen number of bytes, but immersitech wants to know the number of frames of integer samples.
+			// Since a short data type is 2 bytes, we divide datalen by 2, and since frames is independent of channels, we divide by the number of channels.
+			immersitech_process(member->my_imm_handle, (int16_t*)read_frame->data, read_frame->datalen / 2 / read_frame->channels, (int16_t*)read_frame->data);
 #endif
 			
 			data = read_frame->data;
