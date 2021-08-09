@@ -712,7 +712,7 @@ switch_status_t conference_member_add(conference_obj_t *conference, conference_m
 /******************************************************************/
 #if IMM_SPATIAL_AUDIO_ENABLED
 	// Immersitech processing happens before resampling, and so here we specify the member's sampling rate
-	member->my_imm_handle = create_immersitech_processor(member->read_impl.actual_samples_per_second, member->read_impl.number_of_channels, conference->interval);
+	member->my_imm_handle = create_immersitech_processor(member->orig_read_impl.actual_samples_per_second, member->orig_read_impl.number_of_channels, conference->interval);
 #endif
 
 	if (member->rec) {
