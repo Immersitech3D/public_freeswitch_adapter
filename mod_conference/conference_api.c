@@ -132,8 +132,10 @@ api_command_t conference_api_sub_commands[] = {
 /******************************************************************/
 #if IMM_SPATIAL_AUDIO_ENABLED
 	,
-	{"imm-set-state", (void_fn_t) & conference_api_sub_imm_set_state, CONF_API_SUB_ARGS_SPLIT, "imm-set-state", "<member_id> <imm_audio_control> <value>"},	
-	{"imm-get-state", (void_fn_t) & conference_api_sub_imm_get_state, CONF_API_SUB_MEMBER_TARGET, "imm-get-state", "<[member_id|all]|last|non_moderator> <imm_audio_control>"}	
+	{"imm-set-state", (void_fn_t) & conference_api_sub_imm_set_state, CONF_API_SUB_ARGS_SPLIT, "imm-set-state", "<member_id> <imm_audio_control> <value>"},
+	{"imm-set-position", (void_fn_t) & conference_api_sub_imm_set_position, CONF_API_SUB_ARGS_SPLIT, "imm-set-position", "<member_id> <x> <y> <z>"},
+	{"imm-get-state", (void_fn_t) & conference_api_sub_imm_get_state, CONF_API_SUB_MEMBER_TARGET, "imm-get-state", "<[member_id|all]|last|non_moderator> <imm_audio_control>"},
+	{"imm-get-position", (void_fn_t) & conference_api_sub_imm_get_position, CONF_API_SUB_MEMBER_TARGET, "imm-get-position", "<[member_id|all]|last|non_moderator>"}
 #endif
 };
 /******************************************************************/
@@ -168,6 +170,33 @@ switch_status_t conference_api_sub_imm_set_state(conference_obj_t *conference, s
 	return SWITCH_STATUS_GENERR;
 }
 
+switch_status_t conference_api_sub_imm_set_position(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv) {
+	// We require the format "conference <conference-name> imm-set-position <member_id> <x> <y> <z>" which is 5 arguements
+	// argv[1] is "imm-set-state"
+	// argv[2-5] are <member-id> <x> <y> <z> as integer
+	if (argc == 6) {
+		uint32_t id = atoi(argv[2]);
+		uint32_t x = atoi(argv[3]);
+		uint32_t y = atoi(argv[4]);
+		uint32_t z = atoi(argv[5]);
+		conference_member_t *member;
+
+		if ((member = conference_member_get(conference, id))) {
+			imm_position position = {x,y,z};
+			imm_error_code error_code = immersitech_set_position(member->my_imm_handle, position);
+			switch_thread_rwlock_unlock(member->rwlock);
+			if (error_code == IMM_ERROR_NONE){
+				return SWITCH_STATUS_SUCCESS;
+			}
+			stream->write_function(stream, "-ERR Immersitech set position: %s\n", imm_error_code_to_string(error_code));
+		} else {
+			stream->write_function(stream, "-ERR Member: %u not found.\n", id);
+		}
+	}
+	
+	return SWITCH_STATUS_GENERR;
+}
+
 switch_status_t conference_api_sub_imm_get_state(conference_member_t *member, switch_stream_handle_t *stream, void *data) {
 	// We require the format "conference <conference-name> imm-get-state <member_id> control"
 	int value;
@@ -185,7 +214,29 @@ switch_status_t conference_api_sub_imm_get_state(conference_member_t *member, sw
 			return SWITCH_STATUS_SUCCESS;
 		}
 		else {
-			stream->write_function(stream, "-ERR Immersitech set state: %s\n", imm_error_code_to_string(error_code));
+			stream->write_function(stream, "-ERR Immersitech get state: %s\n", imm_error_code_to_string(error_code));
+		}
+	}
+	
+	return SWITCH_STATUS_GENERR;
+}
+
+switch_status_t conference_api_sub_imm_get_position(conference_member_t *member, switch_stream_handle_t *stream, void *data) {
+	// We require the format "conference <conference-name> imm-get-position <member_id>"
+	imm_position position;
+	imm_error_code error_code;
+	if (member == NULL || data == NULL)
+		return SWITCH_STATUS_GENERR;
+	
+	error_code = immersitech_get_position(member->my_imm_handle, &position);
+	
+	if(stream != NULL) {
+		if(error_code == IMM_ERROR_NONE) {
+			stream->write_function(stream, "Member %u at {%i, %i, %i}\n", member->id, position.x, position.y, position.z);
+			return SWITCH_STATUS_SUCCESS;
+		}
+		else {
+			stream->write_function(stream, "-ERR Immersitech get position: %s\n", imm_error_code_to_string(error_code));
 		}
 	}
 	

@@ -1285,7 +1285,9 @@ switch_status_t conference_api_set_moh(conference_obj_t *conference, const char 
 /******************************************************************/
 #if IMM_SPATIAL_AUDIO_ENABLED
 switch_status_t conference_api_sub_imm_set_state(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv);
+switch_status_t conference_api_sub_imm_set_position(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv);
 switch_status_t conference_api_sub_imm_get_state(conference_member_t *member, switch_stream_handle_t *stream, void *data);
+switch_status_t conference_api_sub_imm_get_position(conference_member_t *member, switch_stream_handle_t *stream, void *data);
 #endif
 
 void conference_loop_mute_on(conference_member_t *member, caller_control_action_t *action);

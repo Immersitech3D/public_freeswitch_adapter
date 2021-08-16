@@ -56,6 +56,15 @@ imm_error_code immersitech_get_state(imm_handle handle, imm_audio_control contro
 	return imm_get_participant_state(handle, IMM_PROCESSOR_ROOM_ID, IMM_PROCESSOR_INPUT_ID, control, value);
 }
 
+imm_error_code immersitech_set_position(imm_handle handle, imm_position position) {
+	return imm_set_participant_position(handle, IMM_PROCESSOR_ROOM_ID, IMM_PROCESSOR_INPUT_ID, position, {0,0});
+}
+
+imm_error_code immersitech_get_position(imm_handle handle, imm_position* position) {
+	imm_heading heading;
+	return imm_get_participant_position(handle, IMM_PROCESSOR_ROOM_ID, IMM_PROCESSOR_INPUT_ID, position, &heading);
+}
+
 void print_library_info(imm_handle handle) {
 	imm_library_configuration config;
 	printf("Immersitech Library Information:\n");
