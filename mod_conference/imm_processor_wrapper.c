@@ -57,7 +57,8 @@ imm_error_code immersitech_get_state(imm_handle handle, imm_audio_control contro
 }
 
 imm_error_code immersitech_set_position(imm_handle handle, imm_position position) {
-	return imm_set_participant_position(handle, IMM_PROCESSOR_ROOM_ID, IMM_PROCESSOR_INPUT_ID, position, {0,0});
+	imm_heading heading = {0,0};
+	return imm_set_participant_position(handle, IMM_PROCESSOR_ROOM_ID, IMM_PROCESSOR_INPUT_ID, position, heading);
 }
 
 imm_error_code immersitech_get_position(imm_handle handle, imm_position* position) {
