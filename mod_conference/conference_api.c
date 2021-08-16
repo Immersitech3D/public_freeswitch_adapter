@@ -225,7 +225,7 @@ switch_status_t conference_api_sub_imm_get_position(conference_member_t *member,
 	// We require the format "conference <conference-name> imm-get-position <member_id>"
 	imm_position position;
 	imm_error_code error_code;
-	if (member == NULL || data == NULL)
+	if (member == NULL)
 		return SWITCH_STATUS_GENERR;
 	
 	error_code = immersitech_get_position(member->my_imm_handle, &position);
