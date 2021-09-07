@@ -36,7 +36,7 @@ test_test_member_LDADD = libmodconference.la
 TESTS = $(noinst_PROGRAMS)
 
 if HAVE_IMMERSITECH
-mod_conference_la_SOURCES += imm_processor_wrapper.c
+mod_conference_la_SOURCES += imm_processor_wrapper.cpp
 mod_conference_la_CFLAGS += -DNOISE_SUPPRESSION -DIMM_SPATIAL_AUDIO_ENABLED $(IMMERSITECH_CFLAGS)
 mod_conference_la_LDFLAGS += $(IMMERSITECH_LIBS)
 
