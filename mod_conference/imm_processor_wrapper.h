@@ -13,6 +13,11 @@ participant IDs, room IDs, or an other extra features from the full featured lib
 #define IMMERSITECH_PROCESSOR_WRAPPER_H_
 
 #include "immersitech.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdio.h>
 
 // Set these parameters to match your conference settings
@@ -22,7 +27,7 @@ participant IDs, room IDs, or an other extra features from the full featured lib
 #define IMM_LICENSE_PATH_DEFAULT "/usr/local/lib/immersitech/my_license.dat"
 
 // Set license and config paths
-void configure_immersitech_library (const char *imm_license_path, const char *imm_room_layout_path, const char *imm_websocket_path);
+void configure_immersitech_library(const char *imm_license_path, const char *imm_room_layout_path, const char *imm_websocket_path);
 
 // Create / Destroy your immersitech processor
 // Note that interval is the conference internal in milliseconds, such as 20 milliseconds.
@@ -40,5 +45,9 @@ imm_error_code immersitech_get_position(imm_handle handle, imm_position* positio
 
 // Print information about the library
 void print_library_info(imm_handle handle);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // IMMERSITECH_PROCESSOR_WRAPPER_H_

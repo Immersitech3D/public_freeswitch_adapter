@@ -12,7 +12,7 @@ static char *imm_license_path = NULL;
 static char *imm_room_layout_path = NULL;
 static char *imm_websocket_path = NULL;
 
-void configure_immersitech_library (const char *_imm_license_path, const char *_imm_room_layout_path, const char *_imm_websocket_path) {
+void configure_immersitech_library(const char *_imm_license_path, const char *_imm_room_layout_path, const char *_imm_websocket_path) {
 	if (imm_license_path) {
 		free(imm_license_path);
 		imm_license_path = NULL;
