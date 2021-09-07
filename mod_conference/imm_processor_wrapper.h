@@ -18,11 +18,11 @@ participant IDs, room IDs, or an other extra features from the full featured lib
 // Set these parameters to match your conference settings
 #define IMM_SPATIAL_QUALITY 1
 
-// Set these paths to match your local file system and file names
-// You can enter a room layout and websocket path if later you decide to use them
-#define IMM_LICENSE_PATH "/usr/local/lib/immersitech/my_license.dat"
-#define IMM_ROOM_LAYOUT_PATH NULL
-#define IMM_WEBSOCKET_PATH NULL
+// Set default path to license file
+#define IMM_LICENSE_PATH_DEFAULT "/usr/local/lib/immersitech/my_license.dat"
+
+// Set license and config paths
+void configure_immersitech_library (const char *imm_license_path, const char *imm_room_layout_path, const char *imm_websocket_path);
 
 // Create / Destroy your immersitech processor
 // Note that interval is the conference internal in milliseconds, such as 20 milliseconds.
@@ -30,7 +30,7 @@ imm_handle create_immersitech_processor(int sampling_rate, int number_of_channel
 void destroy_immersitech_processor(imm_handle handle);
 
 // Process your audio directly through the processor
-void immersitech_process(imm_handle handle, short* input, int num_in_frames, short* output);
+imm_error_code immersitech_process(imm_handle handle, short* input, int num_in_frames, short* output);
 
 // Change the audio effects states at any time
 imm_error_code immersitech_set_state(imm_handle handle, imm_audio_control control, int value);

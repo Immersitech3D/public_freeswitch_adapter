@@ -41,6 +41,10 @@
  */
 #include <mod_conference.h>
 
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+switch_atomic_t imm_instances = 0;
+#endif
+
 struct _mapping control_mappings[] = {
 	{"mute", conference_loop_mute_toggle},
 	{"mute on", conference_loop_mute_on},
@@ -800,6 +804,105 @@ static void stop_talking_handler(conference_member_t *member)
 	
 }
 
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+void destroy_imm_processor(conference_member_t *member)
+{
+	member->is_imm_reset_needed = SWITCH_FALSE;
+
+	if (member->my_imm_handle) {
+		destroy_immersitech_processor(member->my_imm_handle);
+		member->my_imm_handle = NULL;
+
+		switch_atomic_dec(&imm_instances);
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(member->session), SWITCH_LOG_INFO,
+			"Immersitech processor destroyed, %d/%d instances in-use\n",
+			switch_atomic_read(&imm_instances), conference_globals.imm_max_instances
+		);
+	}
+}
+
+int create_imm_processor(conference_member_t *member)
+{
+	if (
+		(member->read_impl.actual_samples_per_second != 8000 &&
+		 member->read_impl.actual_samples_per_second != 16000 &&
+		 member->read_impl.actual_samples_per_second != 48000) || // it could be PCMU 8kHz, 16khz, 48khz as well
+		(member->read_impl.number_of_channels != 1 &&
+		 member->read_impl.number_of_channels != 2 ) || // either mono or stereo
+		(member->read_impl.microseconds_per_packet == 0) ||
+		((member->read_impl.microseconds_per_packet / 1000) % 10 != 0) // ptime = 10ms * X, e.g 20ms
+	) {
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(member->session), SWITCH_LOG_WARNING,
+			"Cannot create Immersitech processor instance for member %d of conference %s: incompatible %d/%d/%d audio\n",
+			member->id, member->conference->name,
+			member->read_impl.actual_samples_per_second, member->read_impl.number_of_channels, member->read_impl.microseconds_per_packet / 1000
+		);
+		return 0;
+	}
+
+	if (switch_atomic_read(&imm_instances) >= (uint32_t)conference_globals.imm_max_instances) { // due to switch_atomic_read() is uint32_t
+		return 0;
+	}
+
+	member->my_imm_handle = create_immersitech_processor( 
+		member->read_impl.actual_samples_per_second,
+		member->read_impl.number_of_channels,
+		member->read_impl.microseconds_per_packet / 1000
+	);
+	
+	if (!member->my_imm_handle) {
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(member->session), SWITCH_LOG_ERROR, "Cannot create Immersitech processor instance!\n");
+		destroy_imm_processor(member);
+		return -1;
+	} else {
+		configure_imm_processor(member);
+	}
+
+	switch_atomic_inc(&imm_instances);
+	switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(member->session), SWITCH_LOG_INFO,
+		"Immersitech processor created for member %d of conference %s: %d/%d/%d audio, %d/%d instances in-use\n",
+		member->id, member->conference->name,
+		member->read_impl.actual_samples_per_second, member->read_impl.number_of_channels, member->read_impl.microseconds_per_packet / 1000,
+		switch_atomic_read(&imm_instances), conference_globals.imm_max_instances
+	);
+
+	member->is_imm_reset_needed = SWITCH_FALSE;
+
+	return 1;
+}
+
+void configure_imm_processor(conference_member_t *member) {
+	imm_error_code error_code;
+	int value = member->conference->imm_anc_enable;
+	error_code = immersitech_set_state(member->my_imm_handle, IMM_CONTROL_ANC_ENABLE, value);
+	if (error_code != IMM_ERROR_NONE) {
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(member->session), SWITCH_LOG_WARNING,
+			"Cannot set Immersitech noise cancellation flag for member %d of conference %s: %s\n",
+			member->id, member->conference->name,
+			imm_error_code_to_string(error_code)
+		);
+	}
+	value = member->conference->imm_agc_enable;
+	error_code = immersitech_set_state(member->my_imm_handle, IMM_CONTROL_AGC_ENABLE, value);
+	if (error_code != IMM_ERROR_NONE) {
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(member->session), SWITCH_LOG_WARNING,
+			"Cannot set Immersitech AGC flag for member %d of conference %s: %s\n",
+			member->id, member->conference->name,
+			imm_error_code_to_string(error_code)
+		);
+	}
+	value = member->conference->imm_autoeq_enable;
+	error_code = immersitech_set_state(member->my_imm_handle, IMM_CONTROL_AUTO_EQ_ENABLE, value);
+	if (error_code != IMM_ERROR_NONE) {
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(member->session), SWITCH_LOG_WARNING,
+			"Cannot set Immersitech Auto-EQ flag for member %d of conference %s: %s\n",
+			member->id, member->conference->name,
+			imm_error_code_to_string(error_code)
+		);
+	}
+}
+#endif
+
 /* marshall frames from the call leg to the conference thread for muxing to other call legs */
 void *SWITCH_THREAD_FUNC conference_loop_input(switch_thread_t *thread, void *obj)
 {
@@ -911,6 +1014,13 @@ void *SWITCH_THREAD_FUNC conference_loop_input(switch_thread_t *thread, void *ob
 				break;
 			}
 
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+			if (member->my_imm_handle) {
+				destroy_imm_processor(member);
+				member->imm_last_init_time = 0;
+			}
+#endif
+
 			member->loop_loop = 1;
 
 			goto do_continue;
@@ -951,18 +1061,66 @@ void *SWITCH_THREAD_FUNC conference_loop_input(switch_thread_t *thread, void *ob
 			int16_t *data;
 			int gate_check = 0;
 			int score_iir = 0;
-			
-/******************************************************************/
-/*                                                                */
-/*            Code injection for Immersitech Adapter.             */
-/*                                                                */
-/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-			// read_frame has datalen number of bytes, but immersitech wants to know the number of frames of integer samples.
-			// Since a short data type is 2 bytes, we divide datalen by 2, and since frames is independent of channels, we divide by the number of channels.
-			immersitech_process(member->my_imm_handle, (int16_t*)read_frame->data, read_frame->datalen / 2 / read_frame->channels, (int16_t*)read_frame->data);
+
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+			if (
+				!member->my_imm_handle &&
+				!conference_utils_member_test_flag(member, MFLAG_PREVENT_DENOISE) &&
+				(member->conference->imm_anc_enable ||
+					member->conference->imm_agc_enable ||
+					member->conference->imm_autoeq_enable
+				) &&
+				(switch_time_now() - member->imm_last_init_time >= 1000000)
+			) {
+				int res = create_imm_processor(member);
+				if (res == 1) {
+					member->imm_init_counter = 0; // Reset counter
+				}
+				else if (res == 0) {
+					if (++member->imm_init_counter >= 5) { // Too many failed attempts
+						conference_utils_member_set_flag(member, MFLAG_PREVENT_DENOISE);
+					}
+				}
+				else {
+					conference_utils_member_set_flag(member, MFLAG_PREVENT_DENOISE);
+				}
+				member->imm_last_init_time = switch_time_now();
+			}
+			if (member->my_imm_handle &&
+				!member->conference->imm_anc_enable &&
+				!member->conference->imm_agc_enable &&
+				!member->conference->imm_autoeq_enable
+			) {
+				destroy_imm_processor(member);
+				member->imm_last_init_time = 0;
+			}
+			if (member->my_imm_handle && member->is_imm_reset_needed) {
+				configure_imm_processor(member);
+				member->is_imm_reset_needed = SWITCH_FALSE;
+			}
+			if (member->my_imm_handle && read_frame->datalen > 0) {
+				imm_error_code error_code = immersitech_process(
+					member->my_imm_handle,
+					(int16_t*)read_frame->data,
+					read_frame->datalen / 2 / read_frame->channels,
+					(int16_t*)read_frame->data
+				);
+
+				if (error_code == IMM_ERROR_NONE) {
+					member->imm_process_err_counter = 0; // Reset counter
+				} else {
+					if (++member->imm_process_err_counter >= 5) { // Too many failed attempts
+						conference_utils_member_set_flag(member, MFLAG_PREVENT_DENOISE);
+					}
+					switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(member->session), SWITCH_LOG_WARNING,
+						"Immersitech failed to process frame for member %d of conference %s: %s\n",
+						member->id, member->conference->name,
+						imm_error_code_to_string(error_code)
+					);
+				}
+			}
 #endif
-			
+
 			data = read_frame->data;
 			member->score = 0;
 
@@ -1274,6 +1432,11 @@ void *SWITCH_THREAD_FUNC conference_loop_input(switch_thread_t *thread, void *ob
 		}
 	}
 
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+	if (member->my_imm_handle) {
+		destroy_imm_processor(member);
+	}
+#endif
 
 	switch_resample_destroy(&member->read_resampler);
 	switch_core_session_rwunlock(session);

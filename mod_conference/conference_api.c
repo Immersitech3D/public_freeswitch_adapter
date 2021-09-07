@@ -125,25 +125,20 @@ api_command_t conference_api_sub_commands[] = {
 	{"vid-bgimg", (void_fn_t) & conference_api_sub_canvas_bgimg, CONF_API_SUB_ARGS_SPLIT, "vid-bgimg", "<file> | clear [<canvas-id>]"},
 	{"vid-bandwidth", (void_fn_t) & conference_api_sub_vid_bandwidth, CONF_API_SUB_ARGS_SPLIT, "vid-bandwidth", "<BW>"},
 	{"vid-personal", (void_fn_t) & conference_api_sub_vid_personal, CONF_API_SUB_ARGS_SPLIT, "vid-personal", "[on|off]"}
-/******************************************************************/
-/*                                                                */
-/*            Code injection for Immersitech Adapter.             */
-/*                                                                */
-/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
+#ifdef NOISE_SUPPRESSION
+	,{"denoise-off", (void_fn_t) & conference_api_sub_denoise_off, CONF_API_SUB_ARGS_SPLIT, "denoise-off", ""}
+#endif
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
 	,
 	{"imm-set-state", (void_fn_t) & conference_api_sub_imm_set_state, CONF_API_SUB_ARGS_SPLIT, "imm-set-state", "<member_id> <imm_audio_control> <value>"},
 	{"imm-set-position", (void_fn_t) & conference_api_sub_imm_set_position, CONF_API_SUB_ARGS_SPLIT, "imm-set-position", "<member_id> <x> <y> <z>"},
 	{"imm-get-state", (void_fn_t) & conference_api_sub_imm_get_state, CONF_API_SUB_MEMBER_TARGET, "imm-get-state", "<[member_id|all]|last|non_moderator> <imm_audio_control>"},
-	{"imm-get-position", (void_fn_t) & conference_api_sub_imm_get_position, CONF_API_SUB_MEMBER_TARGET, "imm-get-position", "<[member_id|all]|last|non_moderator>"}
+	{"imm-get-position", (void_fn_t) & conference_api_sub_imm_get_position, CONF_API_SUB_MEMBER_TARGET, "imm-get-position", "<[member_id|all]|last|non_moderator>"},
+	{"denoise-imm", (void_fn_t) & conference_api_sub_imm, CONF_API_SUB_ARGS_SPLIT, "denoise-imm", "[anc <on | off>] [agc <on | off>] [autoeq <on | off>]"},
+	{"imm", (void_fn_t) & conference_api_sub_imm, CONF_API_SUB_ARGS_SPLIT, "imm", "[anc <on | off>] [agc <on | off>] [autoeq <on | off>]"}
 #endif
 };
-/******************************************************************/
-/*                                                                */
-/*            Code injection for Immersitech Adapter.             */
-/*                                                                */
-/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
 switch_status_t conference_api_sub_imm_set_state(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv) {
 	// We require the format "conference <conference-name> imm-set-state <member_id> <control> <value>" which is 4 arguements
 	// argv[1] is "imm-set-state"
@@ -155,13 +150,17 @@ switch_status_t conference_api_sub_imm_set_state(conference_obj_t *conference, s
 		conference_member_t *member;
 
 		if ((member = conference_member_get(conference, id))) {
-			imm_audio_control control = imm_string_to_audio_control(argv[3]);
-			imm_error_code error_code = immersitech_set_state(member->my_imm_handle, control, atoi(argv[4]));
-			switch_thread_rwlock_unlock(member->rwlock);
-			if (error_code == IMM_ERROR_NONE){
-				return SWITCH_STATUS_SUCCESS;
+			if (member->my_imm_handle) {
+				imm_audio_control control = imm_string_to_audio_control(argv[3]);
+				imm_error_code error_code = immersitech_set_state(member->my_imm_handle, control, atoi(argv[4]));
+				switch_thread_rwlock_unlock(member->rwlock);
+				if (error_code == IMM_ERROR_NONE){
+					return SWITCH_STATUS_SUCCESS;
+				}
+				stream->write_function(stream, "-ERR Immersitech set state: %s\n", imm_error_code_to_string(error_code));
+			} else {
+				stream->write_function(stream, "-ERR Member: %u has no Immersitech\n", id);
 			}
-			stream->write_function(stream, "-ERR Immersitech set state: %s\n", imm_error_code_to_string(error_code));
 		} else {
 			stream->write_function(stream, "-ERR Member: %u not found.\n", id);
 		}
@@ -206,16 +205,20 @@ switch_status_t conference_api_sub_imm_get_state(conference_member_t *member, sw
 		return SWITCH_STATUS_GENERR;
 	
 	control = imm_string_to_audio_control( (char*) data );
-	error_code = immersitech_get_state(member->my_imm_handle, control, &value);
-	
-	if(stream != NULL) {
-		if(error_code == IMM_ERROR_NONE) {
-			stream->write_function(stream, "Member %u %s: %i\n", member->id, (char*)data, value);
-			return SWITCH_STATUS_SUCCESS;
+	if (member->my_imm_handle) {
+		error_code = immersitech_get_state(member->my_imm_handle, control, &value);
+
+		if(stream != NULL) {
+			if(error_code == IMM_ERROR_NONE) {
+				stream->write_function(stream, "Member %u %s: %i\n", member->id, (char*)data, value);
+				return SWITCH_STATUS_SUCCESS;
+			}
+			else {
+				stream->write_function(stream, "-ERR Immersitech get state: %s\n", imm_error_code_to_string(error_code));
+			}
 		}
-		else {
-			stream->write_function(stream, "-ERR Immersitech get state: %s\n", imm_error_code_to_string(error_code));
-		}
+	} else {
+		stream->write_function(stream, "-ERR Member: %u has no Immersitech\n", member->id);
 	}
 	
 	return SWITCH_STATUS_GENERR;
@@ -241,6 +244,129 @@ switch_status_t conference_api_sub_imm_get_position(conference_member_t *member,
 	}
 	
 	return SWITCH_STATUS_GENERR;
+}
+
+switch_status_t conference_api_sub_imm(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv)
+{
+	int32_t imm_max_instances = conference_globals.imm_max_instances;
+	switch_bool_t anc_enable;
+	switch_bool_t agc_enable;
+	switch_bool_t autoeq_enable;
+
+	int arg_begin;
+
+	if(conference == NULL) {
+		// Default values, so it goes to globals
+		anc_enable = conference_globals.imm_anc_enable;
+		agc_enable = conference_globals.imm_agc_enable;
+		autoeq_enable = conference_globals.imm_autoeq_enable;
+
+		arg_begin = 1;
+	} else {		
+		anc_enable = conference->imm_anc_enable;
+		agc_enable = conference->imm_agc_enable;
+		autoeq_enable = conference->imm_autoeq_enable;
+
+		arg_begin = 2;
+	}
+
+	if (argc > arg_begin) {
+		for (int i = arg_begin; i < argc; i++) {
+			if (!strcasecmp(argv[i], "anc")) {
+				if (++i >= argc) {
+					stream->write_function(stream, "-ERR parameter \"%s\" needs an argument\n", argv[i - 1]);
+					return SWITCH_STATUS_GENERR;
+				}
+				if (!strcasecmp(argv[i], "on")) {
+					anc_enable = SWITCH_TRUE;
+				} else if (!strcasecmp(argv[i], "off")) {
+					anc_enable = SWITCH_FALSE;
+				} else {
+					stream->write_function(stream, "-ERR parameter \"%s\" should be <on|off> and not \"%s\"\n", argv[i - 1], argv[i]);
+					return SWITCH_STATUS_GENERR;
+				}
+			} else if (!strcasecmp(argv[i], "agc")) {
+				if (++i >= argc) {
+					stream->write_function(stream, "-ERR parameter \"%s\" needs an argument\n", argv[i - 1]);
+					return SWITCH_STATUS_GENERR;
+				}
+				if (!strcasecmp(argv[i], "on")) {
+					agc_enable = SWITCH_TRUE;
+				} else if (!strcasecmp(argv[i], "off")) {
+					agc_enable = SWITCH_FALSE;
+				} else {
+					stream->write_function(stream, "-ERR parameter \"%s\" should be <on|off> and not \"%s\"\n", argv[i - 1], argv[i]);
+					return SWITCH_STATUS_GENERR;
+				}
+			} else if (!strcasecmp(argv[i], "autoeq")) {
+				if (++i >= argc) {
+					stream->write_function(stream, "-ERR parameter \"%s\" needs an argument\n", argv[i - 1]);
+					return SWITCH_STATUS_GENERR;
+				}
+				if (!strcasecmp(argv[i], "on")) {
+					autoeq_enable = SWITCH_TRUE;
+				} else if (!strcasecmp(argv[i], "off")) {
+					autoeq_enable = SWITCH_FALSE;
+				} else {
+					stream->write_function(stream, "-ERR parameter \"%s\" should be <on|off> and not \"%s\"\n", argv[i - 1], argv[i]);
+					return SWITCH_STATUS_GENERR;
+				}
+			} else if(conference == NULL && !strcasecmp(argv[i], "max-instances")) {
+				int tmp;
+				if(++i >= argc) {
+					stream->write_function(stream, "-ERR parameter \"%s\" needs an argument\n", argv[i - 1]);
+					return SWITCH_STATUS_GENERR;
+				}
+				tmp = atoi(argv[i]);
+				if (switch_is_number(argv[i]) && tmp >= 0 && tmp <= 1000) {
+					imm_max_instances = tmp;
+				} else {
+					stream->write_function(stream, "-ERR parameter \"%s\" needs an integer argument <0..1000> and not \"%s\"\n", argv[i - 1], argv[i]);
+					return SWITCH_STATUS_GENERR;
+				}
+			} else {
+				stream->write_function(stream, "-ERR invalid parameter \"%s\"\n", argv[i]);
+				return SWITCH_STATUS_GENERR;
+			}
+		}
+	}
+
+	if(conference == NULL) {
+		// Default values, so it goes to globals
+		conference_globals.imm_max_instances = imm_max_instances;
+		conference_globals.imm_anc_enable = anc_enable;
+		conference_globals.imm_agc_enable = agc_enable;
+		conference_globals.imm_autoeq_enable = autoeq_enable;
+
+		if (anc_enable) {
+			// Disabling other denoiers
+		}
+	} else {
+		conference->imm_anc_enable = anc_enable;
+		conference->imm_agc_enable = agc_enable;
+		conference->imm_autoeq_enable = autoeq_enable;
+
+		// Need to re-set Immersitech flags
+		switch_mutex_lock(conference->member_mutex);
+		for (conference_member_t *imember = conference->members; imember; imember = imember->next) {
+			imember->is_imm_reset_needed = SWITCH_TRUE;
+		}
+		switch_mutex_unlock(conference->member_mutex);
+
+		if (anc_enable) {
+			// Disabling other denoiers
+		}
+	}
+
+	stream->write_function(stream, "+OK %s Immersitech noise suppression %s, AGC %s, Auto-EQ %s; max instances %d \n",
+		(conference ? "Conference" : "Global"),
+		(anc_enable ? "enabled" : "disabled"),
+		(agc_enable ? "enabled" : "disabled"),
+		(autoeq_enable ? "enabled" : "disabled"),
+		imm_max_instances
+	);
+
+	return SWITCH_STATUS_SUCCESS;
 }
 #endif
 
@@ -334,6 +460,26 @@ switch_status_t conference_api_main_real(const char *cmd, switch_core_session_t 
 	/* try to find a command to execute */
 	if (argc && argv[0]) {
 		conference_obj_t *conference = NULL;
+
+#ifdef NOISE_SUPPRESSION
+		if (argv[0] && (strcasecmp(argv[0], "denoise-off") == 0
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+				|| strcasecmp(argv[0], "denoise-imm") == 0
+				|| strcasecmp(argv[0], "imm") == 0
+#endif
+			)) {
+			for (int i = 0; i < CONFFUNCAPISIZE; i++) {
+				if (strcasecmp(conference_api_sub_commands[i].pname, argv[0]) == 0) {
+					conference_api_args_cmd_t pfn = (conference_api_args_cmd_t) conference_api_sub_commands[i].pfnapicmd;
+					if (pfn(NULL, stream, argc, argv) != SWITCH_STATUS_SUCCESS) {
+						/* command returned error, so show syntax usage */
+						stream->write_function(stream, "%s %s", conference_api_sub_commands[i].pcommand, conference_api_sub_commands[i].psyntax);
+					}
+					break;
+				}
+			}
+		} else
+#endif
 
 		if ((conference = conference_find(argv[0], NULL))) {
 			if (argc >= 2) {
@@ -1765,6 +1911,34 @@ switch_status_t conference_api_sub_vid_personal(conference_obj_t *conference, sw
 	return SWITCH_STATUS_SUCCESS;
 }
 
+#ifdef NOISE_SUPPRESSION
+switch_status_t conference_api_sub_denoise_off(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv)
+{
+	if(conference == NULL) {
+		// It goes to globals
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+		conference_globals.imm_anc_enable = SWITCH_FALSE;
+#endif
+	} else {
+		// It goes to selected conference
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+		conference->imm_anc_enable = SWITCH_FALSE;
+		// Need to re-set Immersitech flags
+		switch_mutex_lock(conference->member_mutex);
+		for (conference_member_t *imember = conference->members; imember; imember = imember->next) {
+			imember->is_imm_reset_needed = SWITCH_TRUE;
+		}
+		switch_mutex_unlock(conference->member_mutex);
+#endif
+	}
+	stream->write_function(stream, "+OK %s noise suppression disabled\n",
+			(conference ? "Conference" : "Global")
+		);
+
+	return SWITCH_STATUS_SUCCESS;
+}
+#endif
+
 switch_status_t conference_api_sub_vid_bandwidth(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv)
 {
 	uint32_t i;
@@ -2407,6 +2581,20 @@ switch_status_t conference_api_sub_list(conference_obj_t *conference, switch_str
 				stream->write_function(stream, "%spersonal_canvas", fcount ? "|" : "");
 				fcount++;
 			}
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+			if (conference->imm_anc_enable) {
+				stream->write_function(stream, "%simm_anc", fcount ? "|" : "");
+				fcount++;
+			}
+			if (conference->imm_agc_enable) {
+				stream->write_function(stream, "%simm_agc", fcount ? "|" : "");
+				fcount++;
+			}
+			if (conference->imm_autoeq_enable) {
+				stream->write_function(stream, "%simm_autoeq", fcount ? "|" : "");
+				fcount++;
+			}
+#endif
 
 			if (!fcount) {
 				stream->write_function(stream, "none");

@@ -133,6 +133,13 @@ void conference_list(conference_obj_t *conference, switch_stream_handle_t *strea
 			count++;
 		}
 
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+		if (member->my_imm_handle) {
+			stream->write_function(stream, "%s%s", count ? "|" : "", "imm");
+			count++;
+		}
+#endif
+
 		if (conference_utils_member_test_flag(member, MFLAG_MOD)) {
 			stream->write_function(stream, "%s%s", count ? "|" : "", "moderator");
 			count++;
@@ -2526,6 +2533,12 @@ SWITCH_STANDARD_APP(conference_function)
 		switch_mutex_unlock(conference_globals.setup_mutex);
 	}
 
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+	if (member.my_imm_handle) {
+		destroy_imm_processor(&member);
+	}
+#endif
+
 	if (member.read_resampler) {
 		switch_resample_destroy(&member.read_resampler);
 	}
@@ -2768,6 +2781,12 @@ conference_obj_t *conference_new(char *name, conference_xml_cfg_t cfg, switch_co
 	char *video_codec_config_profile_name = NULL;
 	int tmp;
 
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+	switch_bool_t imm_anc_enable = conference_globals.imm_anc_enable;
+	switch_bool_t imm_agc_enable = conference_globals.imm_agc_enable;
+	switch_bool_t imm_autoeq_enable = conference_globals.imm_autoeq_enable;
+#endif
+
 	/* Validate the conference name */
 	if (zstr(name)) {
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Invalid Record! no name.\n");
@@ -2866,6 +2885,14 @@ conference_obj_t *conference_new(char *name, conference_xml_cfg_t cfg, switch_co
 						channels = tmp;
 					}
 				}
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+			} else if (!strcasecmp(var, "immersitech-anc-enable") && !zstr(val)) {
+				imm_anc_enable = switch_true(val);
+			} else if (!strcasecmp(var, "immersitech-agc-enable") && !zstr(val)) {
+				imm_agc_enable = switch_true(val);
+			} else if (!strcasecmp(var, "immersitech-autoeq-enable") && !zstr(val)) {
+				imm_autoeq_enable = switch_true(val);
+#endif
 			} else if (!strcasecmp(var, "domain") && !zstr(val)) {
 				domain = val;
 			} else if (!strcasecmp(var, "description") && !zstr(val)) {
@@ -3649,6 +3676,38 @@ conference_obj_t *conference_new(char *name, conference_xml_cfg_t cfg, switch_co
 		conference->verbose_events = 1;
 	}
 
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+	if (conference->conference_video_mode == CONF_VIDEO_MODE_MUX) {
+		conference->imm_anc_enable = imm_anc_enable;
+		conference->imm_agc_enable = imm_agc_enable;
+		conference->imm_autoeq_enable = imm_autoeq_enable;
+	} else {
+		// Disable processing
+		conference->imm_anc_enable = SWITCH_FALSE;
+		conference->imm_agc_enable = SWITCH_FALSE;
+		conference->imm_autoeq_enable = SWITCH_FALSE;
+	}
+	if (conference->imm_anc_enable) {
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO,
+			"Enable Immersitech Noise Suppression for conference %s\n",
+			conference->name
+		);
+		// Disabling other denoiers
+	}
+	if (conference->imm_agc_enable) {
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO,
+			"Enable Immersitech AGC for conference %s\n",
+			conference->name
+		);
+	}
+	if (conference->imm_autoeq_enable) {
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO,
+			"Enable Immersitech Auto-EQ for conference %s\n",
+			conference->name
+		);
+	}
+#endif
+
 	/* Create the conference unique identifier */
 	switch_uuid_get(&uuid);
 	switch_uuid_format(uuid_str, &uuid);
@@ -3975,6 +4034,89 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_conference_load)
 	SWITCH_ADD_CHAT(chat_interface, CONF_CHAT_PROTO, chat_send);
 
 	send_presence(SWITCH_EVENT_PRESENCE_IN);
+
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+	conference_globals.imm_max_instances = -1;
+	conference_globals.imm_anc_enable = SWITCH_FALSE;
+	conference_globals.imm_agc_enable = SWITCH_FALSE;
+	conference_globals.imm_autoeq_enable = SWITCH_FALSE;
+	{
+		char imm_license_path[512] = { 0 };
+		char imm_room_layout_path[512] = { 0 };
+		char imm_websocket_path[512] = { 0 };
+
+		switch_xml_t cfg = NULL;
+		switch_xml_t xml = switch_xml_open_cfg(mod_conference_cf_name, &cfg, NULL);
+		if (xml) {
+			switch_xml_t settings = switch_xml_child(cfg, "settings");
+			if (settings) {
+				switch_xml_t x_list;
+				for (x_list = switch_xml_child(settings, "param"); x_list; x_list = x_list->next) {
+					const char *name = switch_xml_attr(x_list, "name");
+					const char *value = switch_xml_attr(x_list, "value");
+					if (zstr(name) || zstr(value)) continue;
+
+					if (!strcasecmp("immersitech-max-instances", name)) {
+						int32_t tmp = atoi(value);
+						if (switch_is_number(value) && tmp > 0) {
+							conference_globals.imm_max_instances = tmp;
+						} else {
+							switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Ignoring invalid \"immersitech-max-instances\" value: %s\n", value);
+						}
+					} else if (!strcasecmp("immersitech-anc-enable", name)) {
+						conference_globals.imm_anc_enable = switch_true(value);
+					} else if (!strcasecmp("immersitech-agc-enable", name)) {
+						conference_globals.imm_agc_enable = switch_true(value);
+					} else if (!strcasecmp("immersitech-autoeq-enable", name)) {
+						conference_globals.imm_autoeq_enable = switch_true(value);
+					} else if (!strcasecmp("immersitech-license-path", name)) {
+						if (strlen(value) > 0 && strlen(value) < 512 && (switch_file_exists(value, NULL) == SWITCH_STATUS_SUCCESS)) {
+							switch_copy_string(imm_license_path, value, 512);
+						} else {
+							switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Ignoring invalid \"immersitech-license-path\": \"%s\"\n", value);
+						}
+					} else if (!strcasecmp("immersitech-room-layout-path", name)) {
+						if (strlen(value) > 0 && strlen(value) < 512 && (switch_file_exists(value, NULL) == SWITCH_STATUS_SUCCESS)) {
+							switch_copy_string(imm_room_layout_path, value, 512);
+						} else {
+							switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Ignoring invalid \"immersitech-room-layout-path\": \"%s\"\n", value);
+						}
+					} else if (!strcasecmp("immersitech-websocket-path", name)) {
+						if (strlen(value) > 0 && strlen(value) < 512 && (switch_file_exists(value, NULL) == SWITCH_STATUS_SUCCESS)) {
+							switch_copy_string(imm_websocket_path, value, 512);
+						} else {
+							switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Ignoring invalid \"immersitech-websocket-path\": \"%s\"\n", value);
+						}
+					}
+				}
+			}
+			switch_xml_free(xml);
+		}
+		else {
+			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Open of %s config failed\n", mod_conference_cf_name);
+		}
+		if (conference_globals.imm_anc_enable) {
+			// Disabling other denoiers
+		}
+		if (conference_globals.imm_anc_enable ||
+				conference_globals.imm_anc_enable ||
+				conference_globals.imm_anc_enable
+		) {
+			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO,
+				"Enable Immersitech %s%s%s(max instances=%d)\n",
+				conference_globals.imm_anc_enable ? "Noise Suppression " : "",
+				conference_globals.imm_agc_enable ? "AGC " : "",
+				conference_globals.imm_autoeq_enable ? "Auto-EQ " : "",
+				conference_globals.imm_max_instances
+			);
+		}
+		configure_immersitech_library(
+			strlen(imm_license_path) > 0 ? imm_license_path : NULL,
+			strlen(imm_room_layout_path) > 0 ? imm_room_layout_path : NULL,
+			strlen(imm_websocket_path) > 0 ? imm_websocket_path : NULL
+		);
+	}
+#endif
 
 	conference_globals.running = 1;
 	/* indicate that the module should continue to be loaded */

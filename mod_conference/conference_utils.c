@@ -159,6 +159,11 @@ void conference_utils_set_mflags(const char *flags, member_flag_t *f)
 				f[MFLAG_CAN_HEAR] = 0;
 				f[MFLAG_SILENT] = 1;
 			}
+#ifdef NOISE_SUPPRESSION
+			else if (!strcasecmp(argv[i], "prevent-denoise")) {
+				f[MFLAG_PREVENT_DENOISE] = 1;
+			}
+#endif
 		}
 
 		free(dup);

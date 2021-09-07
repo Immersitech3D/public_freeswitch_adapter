@@ -704,16 +704,6 @@ switch_status_t conference_member_add(conference_obj_t *conference, conference_m
 	switch_assert(conference != NULL);
 	switch_assert(member != NULL);
 	switch_mutex_lock(conference->mutex);
-	
-/******************************************************************/
-/*                                                                */
-/*            Code injection for Immersitech Adapter.             */
-/*                                                                */
-/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-	// Immersitech processing happens before resampling, and so here we specify the member's sampling rate
-	member->my_imm_handle = create_immersitech_processor(member->orig_read_impl.actual_samples_per_second, member->orig_read_impl.number_of_channels, conference->interval);
-#endif
 
 	if (member->rec) {
 		conference->recording_members++;
@@ -1189,15 +1179,6 @@ switch_status_t conference_member_del(conference_obj_t *conference, conference_m
 	lock_member(member);
 
 	conference_member_del_relationship(member, 0);
-
-/******************************************************************/
-/*                                                                */
-/*            Code injection for Immersitech Adapter.             */
-/*                                                                */
-/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-	destroy_immersitech_processor(member->my_imm_handle);
-#endif
 
 	conference_cdr_del(member);
 	
@@ -1770,6 +1751,12 @@ int conference_member_setup_media(conference_member_t *member, conference_obj_t 
 	if (member->read_resampler) {
 		switch_resample_destroy(&member->read_resampler);
 	}
+
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+	if (member->my_imm_handle) {
+		destroy_imm_processor(member);
+	}
+#endif
 
 	switch_core_session_get_real_read_impl(member->session, &member->orig_read_impl);
 	member->native_rate = member->orig_read_impl.samples_per_second;

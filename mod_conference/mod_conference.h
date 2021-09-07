@@ -47,6 +47,10 @@
 
 /* DEFINES */
 
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+#include "imm_processor_wrapper.h"
+#endif
+
 #ifdef OPENAL_POSITIONING
 #define AL_ALEXT_PROTOTYPES
 #include <AL/al.h>
@@ -68,15 +72,6 @@
 #define CONF_DBUFFER_SIZE CONF_BUFFER_SIZE
 #define CONF_DBUFFER_MAX 0
 #define CONF_CHAT_PROTO "conf"
-
-/******************************************************************/
-/*                                                                */
-/*            Code injection for Immersitech Adapter.             */
-/*                                                                */
-/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-#include "imm_processor_wrapper.h"
-#endif
 
 #ifndef MIN
 #define MIN(a, b) ((a)<(b)?(a):(b))
@@ -155,6 +150,12 @@ typedef struct conference_globals_s {
 	int32_t running;
 	uint32_t threads;
 	switch_event_channel_id_t event_channel_id;
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+	int32_t imm_max_instances;
+	switch_bool_t imm_anc_enable;
+	switch_bool_t imm_agc_enable;
+	switch_bool_t imm_autoeq_enable;
+#endif
 } conference_globals_t;
 
 extern conference_globals_t conference_globals;
@@ -223,6 +224,9 @@ typedef enum {
 	MFLAG_VIDEO_JOIN,
 	MFLAG_DED_VID_LAYER,
 	MFLAG_HOLD,
+#ifdef NOISE_SUPPRESSION
+	MFLAG_PREVENT_DENOISE,
+#endif
 	///////////////////////////
 	MFLAG_MAX
 } member_flag_t;
@@ -680,6 +684,11 @@ typedef struct conference_obj {
 	switch_mutex_t *flag_mutex;
 	switch_mutex_t *file_mutex;
 	uint32_t rate;
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+	switch_bool_t imm_anc_enable;
+	switch_bool_t imm_agc_enable;
+	switch_bool_t imm_autoeq_enable;
+#endif
 	uint32_t interval;
 	uint32_t channels;
 	switch_mutex_t *mutex;
@@ -780,14 +789,6 @@ typedef struct conference_relationship {
 
 /* Conference Member Object */
 struct conference_member {
-/******************************************************************/
-/*                                                                */
-/*            Code injection for Immersitech Adapter.             */
-/*                                                                */
-/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
-	imm_handle my_imm_handle;
-#endif
 	uint32_t id;
 	switch_core_session_t *session;
 	switch_channel_t *channel;
@@ -921,6 +922,14 @@ struct conference_member {
 	mcu_layer_cam_opts_t cam_opts;
 	switch_core_video_filter_t video_filters;
 	int video_manual_border;
+
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+	switch_bool_t is_imm_reset_needed;
+	imm_handle my_imm_handle;
+	switch_time_t imm_last_init_time;
+	uint8_t imm_init_counter;
+	uint8_t imm_process_err_counter;
+#endif
 };
 
 typedef enum {
@@ -1278,16 +1287,15 @@ switch_status_t conference_api_dispatch(conference_obj_t *conference, switch_str
 switch_status_t conference_api_sub_syntax(char **syntax);
 switch_status_t conference_api_main_real(const char *cmd, switch_core_session_t *session, switch_stream_handle_t *stream);
 switch_status_t conference_api_set_moh(conference_obj_t *conference, const char *what);
-/******************************************************************/
-/*                                                                */
-/*            Code injection for Immersitech Adapter.             */
-/*                                                                */
-/******************************************************************/
-#if IMM_SPATIAL_AUDIO_ENABLED
+#ifdef NOISE_SUPPRESSION
+switch_status_t conference_api_sub_denoise_off(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv);
+#endif
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
 switch_status_t conference_api_sub_imm_set_state(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv);
 switch_status_t conference_api_sub_imm_set_position(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv);
 switch_status_t conference_api_sub_imm_get_state(conference_member_t *member, switch_stream_handle_t *stream, void *data);
 switch_status_t conference_api_sub_imm_get_position(conference_member_t *member, switch_stream_handle_t *stream, void *data);
+switch_status_t conference_api_sub_imm(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv);
 #endif
 
 void conference_loop_mute_on(conference_member_t *member, caller_control_action_t *action);
@@ -1328,6 +1336,11 @@ void conference_set_variable(conference_obj_t *conference, const char *var, cons
 const char *conference_get_variable(conference_obj_t *conference, const char *var);
 
 
+#ifdef IMM_SPATIAL_AUDIO_ENABLED
+int create_imm_processor(conference_member_t *member);
+void destroy_imm_processor(conference_member_t *member);
+void configure_imm_processor(conference_member_t *member);
+#endif
 /* Global Structs */
 
 
