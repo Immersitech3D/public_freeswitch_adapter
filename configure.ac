@@ -1858,6 +1858,17 @@ if test "${enable_pool_sanitizer}" = "yes"; then
   ac_configure_args="$ac_configure_args --enable-pool-debug=yes"
 fi
 
+AC_ARG_ENABLE(immersitech,
+	[AC_HELP_STRING([--enable-immersitech], [Enable Immersitech3D library in mod_conference and own adapter module])],
+	[],
+	[enable_immersitech="yes"]
+)
+AS_IF([test "x$enable_immersitech" = "xyes"], [
+	PKG_CHECK_MODULES([IMMERSITECH], [immersitech >= 1.0.3])
+	AC_DEFINE([HAVE_IMMERSITECH], [1], [Enable Immersitech3D library in mod_conference and own adapter module])
+])
+AM_CONDITIONAL([HAVE_IMMERSITECH], [test "x$enable_immersitech" = "xyes"])
+
 # we never use this, and hard setting it will make cross compile work better
 ac_cv_file_dbd_apr_dbd_mysql_c=no
 
