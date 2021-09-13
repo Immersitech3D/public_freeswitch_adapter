@@ -19,7 +19,7 @@ void configure_immersitech_library(const char *_imm_license_path, const char *_i
 	}
 	if(_imm_license_path) {
 		size_t len = strlen(_imm_license_path);
-		imm_license_path = malloc(len + 1); // NULL isn't counted by strlen
+		imm_license_path = (char *)malloc(len + 1); // NULL isn't counted by strlen
 		strncpy(imm_license_path, _imm_license_path, len);
 		imm_license_path[len] = '\0';
 	}
@@ -30,7 +30,7 @@ void configure_immersitech_library(const char *_imm_license_path, const char *_i
 	}
 	if(_imm_room_layout_path) {
 		size_t len = strlen(_imm_room_layout_path);
-		imm_room_layout_path = malloc(len + 1); // NULL isn't counted by strlen
+		imm_room_layout_path = (char *)malloc(len + 1); // NULL isn't counted by strlen
 		strncpy(imm_room_layout_path, _imm_room_layout_path, len);
 		imm_room_layout_path[len] = '\0';
 	}
@@ -41,7 +41,7 @@ void configure_immersitech_library(const char *_imm_license_path, const char *_i
 	}
 	if(_imm_websocket_path) {
 		size_t len = strlen(_imm_websocket_path);
-		imm_websocket_path = malloc(len + 1); // NULL isn't counted by strlen
+		imm_websocket_path = (char *)malloc(len + 1); // NULL isn't counted by strlen
 		strncpy(imm_websocket_path, _imm_websocket_path, len);
 		imm_websocket_path[len] = '\0';
 	}

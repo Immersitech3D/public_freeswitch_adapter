@@ -38,9 +38,14 @@ TESTS = $(noinst_PROGRAMS)
 if HAVE_IMMERSITECH
 mod_conference_la_SOURCES += imm_processor_wrapper.cpp imm_freeswitch_logger.cpp
 mod_conference_la_CFLAGS += -DNOISE_SUPPRESSION -DIMM_SPATIAL_AUDIO_ENABLED $(IMMERSITECH_CFLAGS)
+mod_conference_la_CXXFLAGS = -DNOISE_SUPPRESSION -DIMM_SPATIAL_AUDIO_ENABLED $(IMMERSITECH_CFLAGS)
 mod_conference_la_LDFLAGS += $(IMMERSITECH_LIBS)
 
+libmodconference_la_CFLAGS += -DNOISE_SUPPRESSION -DIMM_SPATIAL_AUDIO_ENABLED $(IMMERSITECH_CFLAGS)
+libmodconference_la_CXXFLAGS = -DNOISE_SUPPRESSION -DIMM_SPATIAL_AUDIO_ENABLED $(IMMERSITECH_CFLAGS)
+libmodconference_la_LDFLAGS = $(IMMERSITECH_LIBS)
+
 test_test_image_LDFLAGS += $(IMMERSITECH_LIBS)
-test_test_member_LDFLAGS += $(IMMERSITECH_LIBS)
+test_test_member_LDFLAGS += $(IMMERSITECH_LIBS) -lstdc++
 endif
 
