@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "imm_freeswitch_logger.h"
 
 #define IMM_PROCESSOR_ROOM_ID 0
 #define IMM_PROCESSOR_INPUT_ID 0
@@ -11,14 +12,14 @@ static char *imm_license_path = NULL;
 static char *imm_room_layout_path = NULL;
 static char *imm_websocket_path = NULL;
 
-void configure_immersitech_library (const char *_imm_license_path, const char *_imm_room_layout_path, const char *_imm_websocket_path) {
+void configure_immersitech_library(const char *_imm_license_path, const char *_imm_room_layout_path, const char *_imm_websocket_path) {
 	if (imm_license_path) {
 		free(imm_license_path);
 		imm_license_path = NULL;
 	}
 	if(_imm_license_path) {
 		size_t len = strlen(_imm_license_path);
-		imm_license_path = malloc(len + 1); // NULL isn't counted by strlen
+		imm_license_path = (char *)malloc(len + 1); // NULL isn't counted by strlen
 		strncpy(imm_license_path, _imm_license_path, len);
 		imm_license_path[len] = '\0';
 	}
@@ -29,7 +30,7 @@ void configure_immersitech_library (const char *_imm_license_path, const char *_
 	}
 	if(_imm_room_layout_path) {
 		size_t len = strlen(_imm_room_layout_path);
-		imm_room_layout_path = malloc(len + 1); // NULL isn't counted by strlen
+		imm_room_layout_path = (char *)malloc(len + 1); // NULL isn't counted by strlen
 		strncpy(imm_room_layout_path, _imm_room_layout_path, len);
 		imm_room_layout_path[len] = '\0';
 	}
@@ -40,10 +41,16 @@ void configure_immersitech_library (const char *_imm_license_path, const char *_
 	}
 	if(_imm_websocket_path) {
 		size_t len = strlen(_imm_websocket_path);
-		imm_websocket_path = malloc(len + 1); // NULL isn't counted by strlen
+		imm_websocket_path = (char *)malloc(len + 1); // NULL isn't counted by strlen
 		strncpy(imm_websocket_path, _imm_websocket_path, len);
 		imm_websocket_path[len] = '\0';
 	}
+	
+	// Upon loading mod_conference module, we set up Immersitech logging one time
+	imm_freeswitch_logger* logger_handler = new imm_freeswitch_logger();
+	IMM_LOGGER->initialize(logger_handler);
+	imm_enable_logging(true);
+	imm_set_log_level( 0 ); // set log level to least restrictive level and allow freeswitch to control level
 }
 
 imm_handle create_immersitech_processor(int sampling_rate, int number_of_channels, int interval) {
@@ -51,9 +58,6 @@ imm_handle create_immersitech_processor(int sampling_rate, int number_of_channel
 	imm_library_configuration config;
 	imm_participant_configuration participant_config;
 	imm_handle handle;
-	
-	// Let us log to freeswitch as it is easier to debug
-	imm_enable_logging(false); // Disabled until ouput is redirected to FS logs
 
 	// Create the library, a room, and our input and output participants
 	config.interleaved = true; // Audio in freeswitch is always interleaved
@@ -95,7 +99,7 @@ imm_handle create_immersitech_processor(int sampling_rate, int number_of_channel
 	}
 	
 	// Print information about this participant and the library
-	// print_library_info(handle); // Disabled until ouput is redirected to FS logs
+	print_library_info(handle);
 	
 	return handle;
 }
